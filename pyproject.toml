@@ -1,0 +1,20 @@
+[tool.poetry]
+name = "fossil"
+version = "0.1.0"
+description = "A mastodon reader client that uses embeddings to present a consolidated view of my mastodon timeline"
+authors = ["Tim Kellogg <timothy.kellogg@gmail.com>"]
+license = "MIT"
+readme = "README.md"
+
+[tool.poetry.dependencies]
+python = "^3.10"
+requests = "^2.31.0"
+streamlit = "^1.29.0"
+scikit-learn = "^1.3.2"
+openai = "^1.5.0"
+html2text = "^2020.1.16"
+
+
+[build-system]
+requires = ["poetry-core"]
+build-backend = "poetry.core.masonry.api"
