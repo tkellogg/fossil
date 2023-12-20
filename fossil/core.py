@@ -153,7 +153,8 @@ def download_timeline(since: datetime.datetime):
     earliest_date = None
     buffer: list[Toot] = []
     last_id = ""
-    curr_url = f"https://hachyderm.io/api/v1/timelines/home?limit=40"
+    oauth_uri = config.get_config()["OAUTH_CLIENT_URI"]
+    curr_url = f"{oauth_uri}/api/v1/timelines/home?limit=40"
     import json as JSON
     while not earliest_date or earliest_date > last_date:
         response = requests.get(curr_url, headers=config.headers())
