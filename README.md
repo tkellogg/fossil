@@ -24,7 +24,7 @@ They can also be environment variables. All available keys are here:
 | ---                 | ---       | ---                                      |
 | OPENAI_API_BASE     |        no | eg. https://api.openai.com/v1            |
 | OPENAI_KEY          |       yes | Create an account and paste the key here |
-| MASTO_API_BASE      |       no? | eg. https://hackyderm.io                 |
+| MASTO_BASE          |       no? | eg. https://hackyderm.io                 |
 | ACCESS_TOKEN        |       yes | In your mastodon UI, create a new "app" and copy the access token here |
 
 

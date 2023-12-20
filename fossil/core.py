@@ -1,4 +1,5 @@
 import datetime
+import functools
 import logging
 import sqlite3
 import html2text
@@ -14,10 +15,12 @@ import openai
 logger = logging.getLogger(__name__)
 
 
+@functools.cache
 def create_database():
     if os.path.exists("fossil.db"):
         return
 
+    print("Creating database")
     with sqlite3.connect("fossil.db") as conn:
         c = conn.cursor()
 
@@ -38,6 +41,13 @@ def create_database():
         conn.commit()
 
 
+@functools.lru_cache()
+def _get_json(toot: "Toot") -> dict:
+    # meh, this isn't great, but it works
+    import json
+    return json.loads(toot.orig_json)
+
+
 class Toot(BaseModel):
     class Config:
         arbitrary_types_allowed = True
@@ -50,12 +60,43 @@ class Toot(BaseModel):
     orig_json: str | None = None
     cluster: str | None = None  # Added cluster property
 
+    @property
+    def orig_dict(self) -> dict:
+        return _get_json(self)
+
+    @property
+    def avatar_url(self) -> str | None:
+        return self.orig_dict.get("account", {}).get("avatar")
+    
+    @property
+    def profile_url(self) -> str | None:    
+        return self.orig_dict.get("account", {}).get("url")
+
+    @property
+    def display_name(self) -> str | None:
+        return self.orig_dict.get("account", {}).get("display_name")
+
+    @property
+    def toot_id(self) -> str | None:
+        return self.orig_dict.get("id")
+
+    @property
+    def is_reply(self) -> bool:
+        return self.orig_dict.get("in_reply_to_id") is not None
+
+    def __hash__(self):
+        return hash(self.url)
+
+    def __eq__(self, other):
+        return self.url == other.url
+
     def save(self, init_conn: sqlite3.Connection | None = None) -> bool:
         try:
             if init_conn is None:
                 conn = sqlite3.connect("fossil.db")
             else:
                 conn = init_conn
+            create_database()
             c = conn.cursor()
 
             # Check if the URL already exists
@@ -90,6 +131,7 @@ class Toot(BaseModel):
 
     @classmethod
     def get_toots_since(cls, since: datetime.datetime) -> list["Toot"]:
+        create_database()
         with sqlite3.connect("fossil.db") as conn:
             c = conn.cursor()
 
@@ -107,7 +149,7 @@ class Toot(BaseModel):
                     url=row[3],
                     created_at=row[4],
                     embedding=np.frombuffer(row[5]) if row[5] else None,
-                    json=row[6],
+                    orig_json=row[6],
                     cluster=row[7]  # Added cluster property
                 )
                 toots.append(toot)
@@ -115,7 +157,8 @@ class Toot(BaseModel):
             return toots
 
     @staticmethod
-    def get_latest_date() -> datetime.datetime:
+    def get_latest_date() -> datetime.datetime | None:
+        create_database()
         with sqlite3.connect("fossil.db") as conn:
             c = conn.cursor()
 
@@ -145,6 +188,12 @@ class Toot(BaseModel):
             orig_json=json.dumps(data),
         )
 
+    def do_star(self):
+        print("star", self.url)
+
+    def do_boost(self):
+        print("boost", self.url)
+
 
 def get_toots_since(since: datetime.datetime):
     assert isinstance(since, datetime.datetime), type(since)
@@ -154,15 +203,13 @@ def get_toots_since(since: datetime.datetime):
 
 
 def download_timeline(since: datetime.datetime):
-    create_database()
-
     last_date = Toot.get_latest_date()
     logger.info(f"last toot date: {last_date}")
     last_date = last_date or since
     earliest_date = None
     buffer: list[Toot] = []
     last_id = ""
-    curr_url = f"{config.MASTO_API_BASE}/v1/timelines/home?limit=40"
+    curr_url = f"{config.MASTO_BASE}/api/v1/timelines/home?limit=40"
     import json as JSON
     while not earliest_date or earliest_date > last_date:
         response = requests.get(curr_url, headers=config.headers())
@@ -218,22 +265,3 @@ def _create_embeddings(toots: list[Toot]):
     # Return the embeddings
     return toots
 
-
-def time_ago(dt: datetime.datetime) -> str:
-    current_time = datetime.datetime.utcnow()
-    time_ago = current_time - dt
-
-    # Convert the time difference to a readable string
-    if time_ago < datetime.timedelta(minutes=1):
-        time_ago_str = "just now"
-    elif time_ago < datetime.timedelta(hours=1):
-        minutes = int(time_ago.total_seconds() / 60)
-        time_ago_str = f"{minutes} minutes ago"
-    elif time_ago < datetime.timedelta(days=1):
-        hours = int(time_ago.total_seconds() / 3600)
-        time_ago_str = f"{hours} hours ago"
-    else:
-        days = time_ago.days
-        time_ago_str = f"{days} days ago"
-
-    return time_ago_str
