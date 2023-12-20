@@ -14,14 +14,18 @@ poetry run streamlit run dashboard.py
 Before that, you'll need a `.env` file with these keys:
 
 ```
-OAUTH_CLIENT_ID=
-OAUTH_CLIENT_SECRET=
 ACCESS_TOKEN=
 OPENAI_KEY=
 ```
 
-* Oauth (first 3) — In your mastodon UI, create a new "app" and copy the information into these
-* OpenAI Key — create an account and paste the key here
+They can also be environment variables. All available keys are here:
+
+| Variable            | Required? | Value                                    |
+| ---                 | ---       | ---                                      |
+| OPENAI_API_BASE     |        no | eg. https://api.openai.com/v1            |
+| OPENAI_KEY          |       yes | Create an account and paste the key here |
+| MASTO_API_BASE      |       no? | eg. https://hackyderm.io                 |
+| ACCESS_TOKEN        |       yes | In your mastodon UI, create a new "app" and copy the access token here |
 
 
 # Status

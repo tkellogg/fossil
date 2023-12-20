@@ -30,6 +30,7 @@ def create_database():
                 url TEXT,
                 created_at DATETIME,
                 embedding BLOB,
+                orig_json TEXT,
                 cluster TEXT  -- Added cluster column
             )
         ''')
@@ -46,6 +47,7 @@ class Toot(BaseModel):
     url: str | None
     created_at: datetime.datetime
     embedding: np.ndarray | None = None
+    orig_json: str | None = None
     cluster: str | None = None  # Added cluster property
 
     def save(self, init_conn: sqlite3.Connection | None = None) -> bool:
@@ -72,13 +74,15 @@ class Toot(BaseModel):
                 DELETE FROM toots WHERE url = ?
             ''', (self.url,))
 
+            embedding = self.embedding.tobytes() if self.embedding is not None else bytes()
             c.execute('''
-                INSERT INTO toots (content, author, url, created_at, embedding, cluster)
-                VALUES (?, ?, ?, ?, ?, ?)
-            ''', (self.content, self.author, self.url, self.created_at, self.embedding.tobytes() if self.embedding is not None else bytes(), self.cluster))
+                INSERT INTO toots (content, author, url, created_at, embedding, orig_json, cluster)
+                VALUES (?, ?, ?, ?, ?, ?, ?)
+            ''', (self.content, self.author, self.url, self.created_at, embedding, self.orig_json, self.cluster))
 
         except:
             conn.rollback()
+            raise
         finally:
             if init_conn is None:
                 conn.commit()
@@ -103,7 +107,8 @@ class Toot(BaseModel):
                     url=row[3],
                     created_at=row[4],
                     embedding=np.frombuffer(row[5]) if row[5] else None,
-                    cluster=row[6]  # Added cluster property
+                    json=row[6],
+                    cluster=row[7]  # Added cluster property
                 )
                 toots.append(toot)
 
@@ -126,14 +131,18 @@ class Toot(BaseModel):
             return latest_date
 
     @classmethod
-    def from_json(cls, json_data):
-        if json_data.get("reblog"):
-            return cls.from_json(json_data["reblog"])
+    def from_dict(cls, data):
+        import json
+
+        if data.get("reblog"):
+            return cls.from_dict(data["reblog"])
+
         return cls(
-            content=json_data.get("content"),
-            author=json_data.get("account", {}).get("acct"),
-            url=json_data.get("url"),
-            created_at=datetime.datetime.strptime(json_data.get("created_at"), "%Y-%m-%dT%H:%M:%S.%fZ")
+            content=data.get("content"),
+            author=data.get("account", {}).get("acct"),
+            url=data.get("url"),
+            created_at=datetime.datetime.strptime(data.get("created_at"), "%Y-%m-%dT%H:%M:%S.%fZ"),
+            orig_json=json.dumps(data),
         )
 
 
@@ -153,7 +162,7 @@ def download_timeline(since: datetime.datetime):
     earliest_date = None
     buffer: list[Toot] = []
     last_id = ""
-    curr_url = f"https://hachyderm.io/api/v1/timelines/home?limit=40"
+    curr_url = f"{config.MASTO_API_BASE}/v1/timelines/home?limit=40"
     import json as JSON
     while not earliest_date or earliest_date > last_date:
         response = requests.get(curr_url, headers=config.headers())
@@ -166,7 +175,7 @@ def download_timeline(since: datetime.datetime):
             last_id = json[-1]["id"]
         logger.info(f"Got {len(json)} toots; earliest={earliest_date.isoformat() if earliest_date else None}, last_id={last_id}")
         for toot_dict in json:
-            toot = Toot.from_json(toot_dict)
+            toot = Toot.from_dict(toot_dict)
             earliest_date = toot.created_at if not earliest_date else min(earliest_date, datetime.datetime.strptime(toot_dict["created_at"], "%Y-%m-%dT%H:%M:%S.%fZ"))
             buffer.append(toot)
 
@@ -193,11 +202,11 @@ def download_timeline(since: datetime.datetime):
 
 def _create_embeddings(toots: list[Toot]):
     # Convert the list of toots to a single string
-    client = openai.OpenAI(api_key=config.get_config()["OPENAI_KEY"])
+    client = openai.OpenAI(api_key=config.OPENAI_KEY)
     toots = [t for t in toots if t.content]
 
     # Call the OpenAI Text Embedding API to create embeddings
-    response = client.embeddings.create(input=[html2text.html2text(t.content) for t in toots], model="text-embedding-ada-002")
+    response = client.embeddings.create(input=[html2text.html2text(t.content) for t in toots], model=config.EMBEDDING_MODEL.name)
 
 
     # Extract the embeddings from the API response
