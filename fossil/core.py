@@ -1,4 +1,5 @@
 import datetime
+import logging
 import sqlite3
 import html2text
 import numpy as np
@@ -10,6 +11,7 @@ import os
 from pydantic import BaseModel
 import openai
 
+logger = logging.getLogger(__name__)
 
 
 def create_database():
@@ -137,24 +139,34 @@ def get_toots_since(since: datetime.datetime):
 def download_timeline(since: datetime.datetime):
     create_database()
 
-    last_date = Toot.get_latest_date() or since
+    last_date = Toot.get_latest_date()
+    logger.info(f"last toot date: {last_date}")
+    last_date = last_date or since
     earliest_date = None
     buffer: list[Toot] = []
     last_id = ""
+    curr_url = f"https://hachyderm.io/api/v1/timelines/home?limit=40"
+    import json as JSON
     while not earliest_date or earliest_date > last_date:
-        response = requests.get(f"https://hachyderm.io/api/v1/timelines/home?limit=40&max_id={last_id}", headers=config.headers())
-        if not response.ok:
-            break
+        response = requests.get(curr_url, headers=config.headers())
+        response.raise_for_status()
         json = response.json()
         if not json:
+            logger.info("No more toots")
             break
         if len(json) > 1:
             last_id = json[-1]["id"]
-        print(f"Got {len(json)} toots; earliest={earliest_date.isoformat() if earliest_date else None}, last_id={last_id}")
+        logger.info(f"Got {len(json)} toots; earliest={earliest_date.isoformat() if earliest_date else None}, last_id={last_id}")
         for toot_dict in json:
             toot = Toot.from_json(toot_dict)
-            earliest_date = toot.created_at if not earliest_date else min(earliest_date, toot.created_at)
+            earliest_date = toot.created_at if not earliest_date else min(earliest_date, datetime.datetime.strptime(toot_dict["created_at"], "%Y-%m-%dT%H:%M:%S.%fZ"))
             buffer.append(toot)
+
+        if "next" in response.links:
+            curr_url = response.links["next"]["url"]
+        else:
+            break
+    logger.info(f"done with toots; earliest={earliest_date.isoformat() if earliest_date else None}, last_date: {last_date.isoformat() if last_date else None}")
 
     # Set embeddings in batches of 100
     page_size = 50
@@ -180,6 +192,7 @@ def _create_embeddings(toots: list[Toot]):
 
 
     # Extract the embeddings from the API response
+    print(f"got {len(response.data)} embeddings")
     embeddings = [np.array(embedding.embedding) for embedding in response.data]
     for i, toot in enumerate(toots):
         toot.embedding = embeddings[i]

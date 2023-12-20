@@ -33,7 +33,8 @@ if st.button("Execute"):
         science.assign_clusters(toots, n_clusters=n_clusters)
         clusters = sorted(list({t.cluster for t in toots if t.cluster}))
         for cluster in clusters:
-            with st.expander(cluster):
+            cluster_count = len([t for t in toots if t.cluster == cluster])
+            with st.expander(f"{cluster} ({cluster_count} toots)"):
                 for toot in toots:
                     if toot.cluster == cluster:
                         st.markdown(f"**{toot.author}** ({core.time_ago(toot.created_at)})\n{toot.content}\n\n", unsafe_allow_html=True)

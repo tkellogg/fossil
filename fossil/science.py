@@ -3,9 +3,13 @@ import openai
 from . import core, config
 from sklearn.cluster import KMeans
 import openai
+import tiktoken
 
 
 def assign_clusters(toots: list[core.Toot], n_clusters: int = 5):
+    # meh, ignore toots without content. I think this might be just an image, not sure
+    toots = [toot for toot in toots if toot.embedding is not None]
+
     # Perform k-means clustering on the embeddings
     embeddings = np.array([toot.embedding for toot in toots])
     kmeans = KMeans(n_clusters=n_clusters)
@@ -20,7 +24,7 @@ def assign_clusters(toots: list[core.Toot], n_clusters: int = 5):
         prompt = f"Create a single label that describes all of these related tweets, make it succinct but descriptive. The label should describe all {len(clustered_toots)} of these\n\n{combined_text}"
         response = client.chat.completions.create(
             model="gpt-3.5-turbo",
-            messages=[{"role": "user", "content": prompt}],
+            messages=[{"role": "user", "content": reduce_size(prompt)}],
             max_tokens=100,
         )
         summary = response.choices[0].message.content.strip()
@@ -29,3 +33,10 @@ def assign_clusters(toots: list[core.Toot], n_clusters: int = 5):
         for toot, cluster_label in zip(toots, cluster_labels):
             if cluster_label == i_clusters:
                 toot.cluster = summary
+
+
+ENCODING = tiktoken.encoding_for_model("gpt-3.5-turbo")
+
+def reduce_size(text: str, model_limit: int = 4097, est_output_size: int = 500) -> str:
+    tokens = ENCODING.encode(text)
+    return ENCODING.decode(tokens[:model_limit - est_output_size])
