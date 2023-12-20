@@ -15,7 +15,7 @@ def assign_clusters(toots: list[core.Toot], n_clusters: int = 5):
     kmeans = KMeans(n_clusters=n_clusters)
     cluster_labels = kmeans.fit_predict(embeddings)
 
-    client = openai.OpenAI(api_key=config.get_config()["OPENAI_KEY"])
+    client = openai.OpenAI(api_key=config.get_config()["OPENAI_KEY"], base_url=config.get_config()["OPENAI_API_BASE"])
     for i_clusters in range(n_clusters):
         clustered_toots = [toot for toot, cluster_label in zip(toots, cluster_labels) if cluster_label == i_clusters]
         combined_text = "\n\n".join([toot.content for toot in clustered_toots])
