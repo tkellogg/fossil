@@ -48,8 +48,12 @@ class Toot(BaseModel):
     embedding: np.ndarray | None = None
     cluster: str | None = None  # Added cluster property
 
-    def save(self) -> bool:
-        with sqlite3.connect("fossil.db") as conn:
+    def save(self, init_conn: sqlite3.Connection | None = None) -> bool:
+        try:
+            if init_conn is None:
+                conn = sqlite3.connect("fossil.db")
+            else:
+                conn = init_conn
             c = conn.cursor()
 
             # Check if the URL already exists
@@ -73,8 +77,12 @@ class Toot(BaseModel):
                 VALUES (?, ?, ?, ?, ?, ?)
             ''', (self.content, self.author, self.url, self.created_at, self.embedding.tobytes() if self.embedding is not None else bytes(), self.cluster))
 
-            conn.commit()
-            return True
+        except:
+            conn.rollback()
+        finally:
+            if init_conn is None:
+                conn.commit()
+        return True
 
     @classmethod
     def get_toots_since(cls, since: datetime.datetime) -> list["Toot"]:
@@ -178,8 +186,9 @@ def download_timeline(since: datetime.datetime):
 
         # Example: Call the _create_embeddings function
         _create_embeddings(page_toots)
-        for toot in page_toots:
-            toot.save()
+        with sqlite3.connect("fossil.db") as conn:
+            for toot in page_toots:
+                toot.save(init_conn=conn)
 
 
 def _create_embeddings(toots: list[Toot]):
