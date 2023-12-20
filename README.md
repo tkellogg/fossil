@@ -1,6 +1,15 @@
 # Fossil, a Mastodon client
 
 A mastodon client (well, just a streamlit dashboard) that lets me consume my mastodon feed by categories according to their content.
+ 
+* Download the timeline and manages a local cache of it
+* Cluster toots together by similar content
+* Display toots with basic level of interaction
+
+Sneak peek:
+
+![image](https://github.com/tkellogg/fossil/assets/437044/0b641def-01b4-41d0-9bc4-35ebb13eab18)
+
 
 ## Running
 
