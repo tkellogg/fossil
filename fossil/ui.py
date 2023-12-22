@@ -1,5 +1,8 @@
-import streamlit as st
 from datetime import timedelta, datetime
+import urllib.parse
+
+import streamlit as st
+
 from . import core, config
 
 def get_time_frame() -> timedelta:
@@ -33,19 +36,56 @@ def time_ago(dt: datetime) -> str:
 
     return time_ago_str
 
-def display_toot(toot: core.Toot):
+
+class LinkStyle:
+    def __init__(self):
+        # ivory://acct/openURL?url=
+        # {config.MASTO_BASE}/deck/@{toot.author}/{toot.toot_id}
+        self.scheme = st.radio("Link scheme:", ["Desktop", "Ivory", "Original"], index=1, horizontal=True)
+
+    def format_url(self, toot: core.Toot) -> str:
+        if self.scheme == "Desktop":
+            return f"{config.MASTO_BASE}/@{toot.author}/{toot.toot_id}"
+        elif self.scheme == "Ivory":
+            encoded_url = urllib.parse.quote(toot.url)
+            return f"ivory://acct/openURL?url={encoded_url}"
+        elif self.scheme == "Original":
+            return toot.url
+        raise ValueError("Invalid scheme")
+
+
+def display_toot(toot: core.Toot, link_style: LinkStyle):
     with st.container(border=True):
         reply = "↩" if toot.is_reply else ""
         st.markdown(f"""
 {reply}<a href="{toot.profile_url}"><img src="{toot.avatar_url}" style="width: 40px; height: 40px" />{toot.display_name} @{toot.author} ({time_ago(toot.created_at)})</a>
 {toot.content}
 """, unsafe_allow_html=True)
-        cols = st.columns(10)
-        with cols[7]:
-            st.markdown(f"""<a href="{config.MASTO_BASE}/deck/@{toot.author}/{toot.toot_id}" target="_blank">🔗</a>""", unsafe_allow_html=True)
-        with cols[8]:
+
+        attachments = [f'<a href="{a.url}"><img src="{a.preview_url}" style="max-width: 100%" /></a>' for a in toot.media_attachments]
+        st.markdown(" ".join(attachments), unsafe_allow_html=True)
+
+        cols = st.columns(4)
+        with cols[0]:
+            st.markdown(f"""<a href="{link_style.format_url(toot)}" target="_blank">🔗</a>""", unsafe_allow_html=True)
+        with cols[1]:
             if st.button("⭐️", key=f"star-{toot.id}"):
                 toot.do_star()
-        with cols[9]:
+        with cols[2]:
             if st.button("️🔁", key=f"boost-{toot.id}"):
                 toot.do_boost()
+        with cols[3]:
+            if st.button("🪲", key=f"delete-{toot.id}"):
+                import json
+                print(json.dumps(toot.orig_dict, indent=2))
+
+
+def all_toot_summary(toots: list[core.Toot]):
+    latest_date = max(t.created_at for t in toots)
+    earliest_date = min(t.created_at for t in toots)
+    now = datetime.utcnow()
+    msg = f"{len(toots)} toots from {time_ago(earliest_date)} to {time_ago(latest_date)}"
+    if latest_date > now:
+        st.warning(msg)
+    else:
+        st.info(msg)

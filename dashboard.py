@@ -4,15 +4,19 @@ import streamlit as st
 import datetime
 import random
 
+st.title("fossil")
+link_style = ui.LinkStyle()
+
 @st.cache_data
 def default_date():
     return datetime.datetime.utcnow() - datetime.timedelta(days=1)
 
 @st.cache_data
 def get_toots(_cache_key: int, timeline_since, n_clusters) -> list[core.Toot]:
-    print("get_toots", _cache_key, st.session_state.cache_key)
+    print("get_toots", _cache_key, st.session_state.cache_key, "since=", datetime.datetime.utcnow() - timeline_since)
     toots = core.Toot.get_toots_since(datetime.datetime.utcnow() - timeline_since)
     if len(toots) > 0:
+        ui.all_toot_summary(toots)
         science.assign_clusters(toots, n_clusters=n_clusters)
     return toots
 
@@ -59,4 +63,4 @@ else:
         with st.expander(f"{cluster} ({cluster_count} toots)"):
             for toot in toots:
                 if toot.cluster == cluster:
-                    ui.display_toot(toot)
+                    ui.display_toot(toot, link_style)

@@ -48,6 +48,12 @@ def _get_json(toot: "Toot") -> dict:
     return json.loads(toot.orig_json)
 
 
+class MediaAttatchment(BaseModel):
+    type: str
+    preview_url: str
+    url: str
+
+
 class Toot(BaseModel):
     class Config:
         arbitrary_types_allowed = True
@@ -83,6 +89,11 @@ class Toot(BaseModel):
     @property
     def is_reply(self) -> bool:
         return self.orig_dict.get("in_reply_to_id") is not None
+
+    @property
+    def media_attachments(self) -> list[MediaAttatchment]:
+        return [MediaAttatchment(type=m.get("type"), url=m.get("url"), preview_url=m.get("preview_url")) 
+                for m in self.orig_dict.get("media_attachments", [])]
 
     def __hash__(self):
         return hash(self.url)
@@ -136,7 +147,9 @@ class Toot(BaseModel):
             c = conn.cursor()
 
             c.execute('''
-                SELECT * FROM toots WHERE created_at >= ?
+                SELECT 
+                    id, content, author, url, created_at, embedding, orig_json, cluster
+                FROM toots WHERE created_at >= ?
             ''', (since,))
 
             rows = c.fetchall()
