@@ -43,7 +43,7 @@ class LinkStyle:
         # {config.MASTO_BASE}/deck/@{toot.author}/{toot.toot_id}
         self.scheme = st.radio("Link scheme:", ["Desktop", "Ivory", "Original"], index=1, horizontal=True)
 
-    def format_url(self, toot: core.Toot) -> str:
+    def toot_url(self, toot: core.Toot) -> str:
         if self.scheme == "Desktop":
             return f"{config.MASTO_BASE}/@{toot.author}/{toot.toot_id}"
         elif self.scheme == "Ivory":
@@ -53,12 +53,22 @@ class LinkStyle:
             return toot.url
         raise ValueError("Invalid scheme")
 
+    def profile_url(self, toot: core.Toot) -> str:
+        if self.scheme == "Desktop":
+            return f"{config.MASTO_BASE}/@{toot.author}"
+        elif self.scheme == "Ivory":
+            # return f"ivory://@{toot.author}/profile"
+            return f"ivory://acct/openURL?url={toot.profile_url}"
+        elif self.scheme == "Original":
+            return toot.profile_url
+        raise ValueError("Invalid scheme")
+
 
 def display_toot(toot: core.Toot, link_style: LinkStyle):
     with st.container(border=True):
         reply = "↩" if toot.is_reply else ""
         st.markdown(f"""
-{reply}<a href="{toot.profile_url}"><img src="{toot.avatar_url}" style="width: 40px; height: 40px" />{toot.display_name} @{toot.author} ({time_ago(toot.created_at)})</a>
+{reply}<a href="{link_style.profile_url(toot)}"><img src="{toot.avatar_url}" style="width: 40px; height: 40px" />{toot.display_name} @{toot.author} ({time_ago(toot.created_at)})</a>
 {toot.content}
 """, unsafe_allow_html=True)
 
@@ -67,7 +77,7 @@ def display_toot(toot: core.Toot, link_style: LinkStyle):
 
         cols = st.columns(4)
         with cols[0]:
-            st.markdown(f"""<a href="{link_style.format_url(toot)}" target="_blank">🔗</a>""", unsafe_allow_html=True)
+            st.markdown(f"""<a href="{link_style.toot_url(toot)}" target="_blank">🔗</a>""", unsafe_allow_html=True)
         with cols[1]:
             if st.button("⭐️", key=f"star-{toot.id}"):
                 toot.do_star()
