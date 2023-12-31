@@ -1,14 +1,19 @@
 # Fossil, a Mastodon client
 
-A mastodon client (well, just a streamlit dashboard) that lets me consume my mastodon feed by categories according to their content.
+A read-only mastodon client that makes it easy to experiment with home feed algorithms. It consumes your timeline
+(chronological ordering) and displays it in a way that suits you best. For example, topic-wise clustering of posts.
+
+At the moment, there are 2 different UIs:
+
+* streamlit: The first take. It was easy to hack on and prove the idea, but there's a lot of state bugs.
+* FastAPI + htmx: A more traditional web app optimized for running the server on your laptop or under your bed.
  
-* Download the timeline and manages a local cache of it
-* Cluster toots together by similar content
-* Display toots with basic level of interaction
+Fossil is evolving quickly, but please contribute your own ideas. Create a ticket, or just create your own fork 
+(and do whatever you want with it).
 
 Sneak peek:
 
-![image](https://github.com/tkellogg/fossil/assets/437044/0b641def-01b4-41d0-9bc4-35ebb13eab18)
+![image](https://gist.github.com/assets/437044/3152e5ae-bac7-4a67-a01b-82a712e90e26)
 
 
 ## Running
