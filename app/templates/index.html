@@ -1,0 +1,61 @@
+
+{% extends "base/page.html" %}
+
+{% block content %}
+  <!-- Your content goes here -->
+  <section>
+    <button hx-post="/toots/download" hx-swap="innerHTML" hx-target="#load_more_button" id="load_more_button" hx-indicator="#downloadspinner">Load More</button>
+    <img src="/static/work-in-progress.gif" class="spinner" id="downloadspinner" /> 
+
+    <form hx-post="/toots/train" hx-target="#toots" hx-swap="innerHTML">
+
+      <div class="radio">
+        <div>
+          <input type="radio" id="desktop" name="link_style" value="desktop" checked>
+          <label for="desktop">Desktop</label>
+        </div>
+        <div>
+          <input type="radio" id="ivory" name="link_style" value="ivory">
+          <label for="ivory">Ivory</label>
+        </div>
+        <div>
+          <input type="radio" id="native" name="link_style" value="native">
+          <label for="native">Native</label>
+        </div>
+      </div>
+
+      <div class="radio">
+        <div>
+          <input type="radio" id="6h" name="time_span" value="6h" checked>
+          <label for="6h">6 Hours</label>
+        </div>
+        <div>
+          <input type="radio" id="12h" name="time_span" value="12h">
+          <label for="12h">12 Hours</label>
+        </div>
+        <div>
+          <input type="radio" id="24h" name="time_span" value="24h">
+          <label for="24h">Day</label>
+        </div>
+        <div>
+          <input type="radio" id="1w" name="time_span" value="1w">
+          <label for="1w">Week</label>
+        </div>
+      </div>
+
+      {% autoescape false %}
+        {{ model_params }}
+      {% endautoescape %}
+
+      <button type="submit" hx-indicator="#trainspinner">
+        Train Algorithm
+      </button>
+      <img src="/static/work-in-progress.gif" class="spinner" id="trainspinner" /> 
+
+    </form>
+  </section>
+    
+  <article id="toots">
+    No Toots Yet.
+  </article>
+{% endblock %}

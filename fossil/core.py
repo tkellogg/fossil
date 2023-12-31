@@ -2,6 +2,7 @@ import datetime
 import functools
 import logging
 import sqlite3
+from typing import Optional
 import html2text
 import numpy as np
 
@@ -95,6 +96,14 @@ class Toot(BaseModel):
         return [MediaAttatchment(type=m.get("type"), url=m.get("url"), preview_url=m.get("preview_url")) 
                 for m in self.orig_dict.get("media_attachments", [])]
 
+    @property
+    def card_preview_url(self) -> str | None:
+        return self.orig_dict.get("card", {}).get("image")
+
+    @property
+    def card_url(self) -> str | None:
+        return self.orig_dict.get("card", {}).get("url")
+
     def __hash__(self):
         return hash(self.url)
 
@@ -168,6 +177,33 @@ class Toot(BaseModel):
                 toots.append(toot)
 
             return toots
+
+    @classmethod
+    def get_by_id(cls, id: int) -> Optional["Toot"]:
+        create_database()
+        with sqlite3.connect("fossil.db") as conn:
+            c = conn.cursor()
+
+            c.execute('''
+                SELECT 
+                    id, content, author, url, created_at, embedding, orig_json, cluster
+                FROM toots WHERE id = ?
+            ''', (id,))
+
+            row = c.fetchone()
+            if row:
+                toot = cls(
+                    id=row[0],
+                    content=row[1],
+                    author=row[2],
+                    url=row[3],
+                    created_at=row[4],
+                    embedding=np.frombuffer(row[5]) if row[5] else None,
+                    orig_json=row[6],
+                    cluster=row[7],  # Added cluster property
+                )
+                return toot
+            return None
 
     @staticmethod
     def get_latest_date() -> datetime.datetime | None:
@@ -278,3 +314,79 @@ def _create_embeddings(toots: list[Toot]):
     # Return the embeddings
     return toots
 
+
+@functools.lru_cache()
+def _create_session_table():
+    create_database()
+    with sqlite3.connect("fossil.db") as conn:
+        c = conn.cursor()
+
+        # Create the toots table if it doesn't exist
+        c.execute('''
+            CREATE TABLE IF NOT EXISTS sessions (
+                id TEXT PRIMARY KEY,
+                algorithm_spec TEXT,
+                algorithm BLOB
+            )
+        ''')
+
+        conn.commit()
+
+
+class Session(BaseModel):
+    id: str
+    algorithm_spec: str | None = None
+    algorithm: bytes | None = None
+
+    @classmethod
+    def get_by_id(cls, id: str) -> Optional["Session"]:
+        create_database()
+        _create_session_table()
+        with sqlite3.connect("fossil.db") as conn:
+            c = conn.cursor()
+
+            c.execute('''
+                SELECT id, algorithm_spec, algorithm FROM sessions WHERE id = ?
+            ''', (id,))
+
+            row = c.fetchone()
+            if row:
+                session = cls(
+                    id=row[0],
+                    model_spec=row[1],
+                    model=row[2],
+                )
+                return session
+            return None
+
+    @classmethod
+    def create(cls) -> "Session":
+        import uuid
+        return cls(id=str(uuid.uuid4()).replace("-", ""))
+
+    def save(self, init_conn: sqlite3.Connection | None = None) -> bool:
+        _create_session_table()
+        try:
+            if init_conn is None:
+                conn = sqlite3.connect("fossil.db")
+            else:
+                conn = init_conn
+            create_database()
+            c = conn.cursor()
+
+            c.execute('''
+                DELETE FROM sessions WHERE id = ?
+            ''', (self.id,))
+
+            c.execute('''
+                INSERT INTO sessions (id, algorithm_spec, algorithm)
+                VALUES (?, ?, ?)
+            ''', (self.id, self.algorithm_spec, self.algorithm))
+
+        except:
+            conn.rollback()
+            raise
+        finally:
+            if init_conn is None:
+                conn.commit()
+        return True

@@ -1,6 +1,7 @@
 from datetime import timedelta, datetime
 import urllib.parse
 
+import pydantic
 import streamlit as st
 
 from . import core, config
@@ -38,10 +39,13 @@ def time_ago(dt: datetime) -> str:
 
 
 class LinkStyle:
-    def __init__(self):
+    def __init__(self, scheme: str | None = None):
         # ivory://acct/openURL?url=
         # {config.MASTO_BASE}/deck/@{toot.author}/{toot.toot_id}
-        self.scheme = st.radio("Link scheme:", ["Desktop", "Ivory", "Original"], index=1, horizontal=True)
+        if scheme:
+            self.scheme = st.radio("Link scheme:", ["Desktop", "Ivory", "Original"], index=1, horizontal=True)
+        else:
+            self.scheme = scheme
 
     def toot_url(self, toot: core.Toot) -> str:
         if self.scheme == "Desktop":
@@ -62,6 +66,31 @@ class LinkStyle:
         elif self.scheme == "Original":
             return toot.profile_url
         raise ValueError("Invalid scheme")
+
+
+
+class TootCluster(pydantic.BaseModel):
+    id: int
+    name: str
+    toots: list[core.Toot]
+
+
+class TootClusters(pydantic.BaseModel):
+    clusters: list[TootCluster]
+
+    @property
+    def num_toots(self) -> int:
+        return sum(len(c.toots) for c in self.clusters)
+
+    @property
+    def max_date(self) -> datetime:
+        seq = [t.created_at for c in self.clusters for t in c.toots]
+        return max(seq) if len(seq) > 0 else datetime.utcnow()
+
+    @property
+    def min_date(self) -> datetime:
+        seq = [t.created_at for c in self.clusters for t in c.toots]
+        return min(seq) if len(seq) > 0 else datetime.utcnow()
 
 
 def display_toot(toot: core.Toot, link_style: LinkStyle):

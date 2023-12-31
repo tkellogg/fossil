@@ -1,0 +1,26 @@
+<div class="toot">
+    <span>
+        <a href="{{ toot.profile_url }}" class="author"><img src="{{ toot.avatar_url }}"/> {{ toot.author }}</a>
+        {{ toot.created_at | rel_date }}
+    </span>
+    <div class="content">
+        {% autoescape false %}
+            {{ toot.content }}
+        {% endautoescape %}
+        <div class="attachments">
+            {% for attachment in toot.attachments %}
+                <a href="{{ attachment.url }}"><img src="{{ attachment.preview_url }}"/></a>
+            {% else %}
+                {% if toot.card_url %}
+                    <a href="{{ toot.card_url }}"><img src="{{ toot.card_preview_url }}"/></a>
+                {% endif %}
+            {% endfor %}
+        </div>
+    </div>
+    <div class="button-bar">
+        <a href="{{ link_style.toot_url(toot) }}"><button>🔗</button></a>
+        <button>⭐️</button>
+        <button>️🔁</button>
+        <button hx-post="/toots/{{ toot.id }}/debug">🪲</button>
+    </div>
+</div>

@@ -1,0 +1,30 @@
+<script lang="javascript">
+    function toggleCluster(id) {
+        let cluster = document.getElementById(id);
+        let value = cluster.getAttribute('data-open');
+        console.log(value, cluster);
+        if (value === "true") {
+            value = false;
+        } else {
+            value = true;
+        }
+        cluster.setAttribute('data-open', value);
+    }
+</script>
+
+<div class="decl">
+    {{ clusters.num_toots }} toots from {{ clusters.min_date | rel_date }} to {{ clusters.max_date | rel_date }}
+</div>
+
+{% for cluster in clusters.clusters %}
+    <div class="cluster" id="cluster-{{ cluster.id }}" data-open="false">
+        <div class="title" onclick="toggleCluster('cluster-{{ cluster.id }}')">
+            {{ cluster.name }} ({{ cluster.toots | length }} Toots)
+        </div>
+        <div class="content">
+            {% set toots = cluster.toots %}
+            {% include 'toot_list.html' %}
+            <button onclick="toggleCluster('cluster-{{ cluster.id }}'); document.querySelector('#cluster-{{ cluster.id }}').scrollIntoView({block: 'center'})">Close</button>
+        </div>
+    </div>
+{% endfor %}

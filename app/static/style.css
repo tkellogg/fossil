@@ -1,0 +1,207 @@
+html {
+    font-size: 100%;
+}
+
+body {
+    background-color: #262222;
+    color: #888888;
+    font-family: "Arial", sans-serif; 
+    max-width: 80rem;
+}
+
+a {
+    color: #888888;
+    /* text-decoration: none; */
+}
+
+.decl {
+    background-color: #3f3544;
+    border-radius: 0.5rem;
+    border-width: 1px;
+    margin-bottom: 1rem;
+    padding: 0.5rem;
+}
+
+/********
+Toot display
+*********/
+.author img {
+    width: 2rem;
+    height: 2rem;
+    border-radius: 50%;
+    margin-right: 0.5rem;
+}
+
+.toot {
+    background-color: #333333;
+    padding: 1rem;
+    border-radius: 4px;
+}
+
+.toot:not(:last-child) {
+    margin-bottom: 1rem;
+}
+
+.toot .button-bar {
+    display: flex;
+    justify-content: flex-end;
+    margin-top: 0.5rem;
+}
+
+.toot .button-bar button {
+    background-color: transparent;
+    margin-left: 0.5rem;
+}
+
+.toot .button-bar button:hover {
+    background-color: #888888;
+    margin-left: 0.5rem;
+}
+
+.toot .content img {
+    max-width: 100%;
+    /* margin-bottom: 10px; */
+    border-radius: 0.5rem;
+}
+
+#toots {
+    margin: 40px 0.5rem;
+}
+
+/********
+Cluster
+*********/
+
+.cluster {
+    border-width: 2px;
+    border-radius: 4px;
+    margin: 1rem 0rem;
+}
+
+.cluster .title {
+    padding: 0.5rem;
+    font-size: 1.5rem;
+    font-weight: bold;
+    background-color: #555555;
+    cursor: pointer;
+}
+
+.cluster[data-open="false"] .title {
+    border-radius: 4px;
+}
+
+.cluster[data-open="true"] .title {
+    border-bottom: 2px solid #888888;
+    border-radius: 4px 0px;
+}
+
+.cluster[data-open="false"] .content {
+    display: none;
+}
+
+.cluster .content button {
+    display: flex;
+    justify-content: flex-end;
+}
+
+/********
+Button
+*********/
+
+button {
+    background-color: #666666;
+    color: #ffffff;
+    border: none;
+    padding: 0.5rem 1rem;
+    font-size: 1rem;
+    font-weight: bold;
+    border-radius: 4px;
+    cursor: pointer;
+}
+
+button:hover {
+    background-color: #888888;
+}
+
+button:focus {
+    outline: none;
+    box-shadow: 0 0 0 2px #ffffff;
+}
+
+/********
+Radio
+*********/
+
+.radio {
+    margin: 0.6rem 0px 0.6rem 0px;
+}
+
+.radio div {
+    display: inline-block;
+    position: relative;
+    padding-left: 0px;
+    margin: 0px 0px 0px 0px;
+    cursor: pointer;
+    font-size: 16px;
+    font-weight: bold;
+}
+
+.radio div input[type="radio"] {
+    display: none;
+}
+
+.radio div label {
+    display: inline-block;
+    padding: 0.5rem 1rem;
+    margin: 0px -4px 0px -4px;
+    background-color: #666666;
+    color: #ffffff;
+    cursor: pointer;
+}
+
+.radio div input[type="radio"]:checked + label {
+    background-color: #888888;
+}
+
+.radio div:first-child label {
+    border-top-left-radius: 4px;
+    border-bottom-left-radius: 4px;
+}
+
+.radio div:last-child label {
+    border-top-right-radius: 4px;
+    border-bottom-right-radius: 4px;
+}
+
+/********
+Slider
+*********/
+
+input[type="range"] {
+    width: 100%;
+    max-width: 400px;
+    margin: 0.5rem 0px 0.5rem 0px;
+}
+
+/********
+Spinner
+*********/
+
+.spinner:not(.htmx-request) {
+    display: inline-block;
+    vertical-align: middle;
+    width: 2rem;
+    height: 2rem;
+    border-radius: 100%;
+    visibility: hidden;
+}
+
+.spinner.htmx-request {
+    display: inline-block;
+    vertical-align: middle;
+    width: 2rem;
+    height: 2rem;
+    border-radius: 100%;
+    visibility: visible;
+    opacity: 1;
+}
