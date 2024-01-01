@@ -26,6 +26,8 @@ ALL_MODELS: dict[str, Model] = {m.name: m for m in [
     Model(name="text-embedding-ada-002", context_length=8191),
 ]}
 
+DATABASE_PATH = get_config().get("DATABASE_PATH", "fossil.db")
+
 
 # Required keys in either .env or environment variables
 ACCESS_TOKEN = get_config()["ACCESS_TOKEN"]

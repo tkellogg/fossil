@@ -84,6 +84,8 @@ Cluster
     font-weight: bold;
     background-color: #555555;
     cursor: pointer;
+    position: sticky;
+    top: 0;
 }
 
 .cluster[data-open="false"] .title {

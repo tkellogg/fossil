@@ -1,10 +1,24 @@
 from fastapi import Response, responses
 import numpy as np
 import openai
+import pydantic
 from sklearn.cluster import KMeans
 import tiktoken
 from fossil import config, core, ui
 from fossil.algorithm import base
+
+
+class ClusterRenderer(base.Renderable, pydantic.BaseModel):
+    clusters: list[ui.TootCluster]
+    context: base.RenderContext
+
+    def render(self, **response_args) -> Response:
+        toot_clusters = ui.TootClusters(clusters=self.clusters)
+        return self.context.templates.TemplateResponse("toot_clusters.html", {
+            "clusters": toot_clusters,
+            **self.context.template_args(),
+        },
+        **response_args)
 
 
 class TopicCluster(base.BaseAlgorithm):
@@ -12,7 +26,7 @@ class TopicCluster(base.BaseAlgorithm):
         self.kmeans = kmeans
         self.labels = labels
 
-    def render(self, toots: list[core.Toot], context: base.RenderContext) -> Response:
+    def render(self, toots: list[core.Toot], context: base.RenderContext) -> ClusterRenderer:
         toots = [toot for toot in toots if toot.embedding is not None]
         cluster_indices = self.kmeans.predict(np.array([toot.embedding for toot in toots]))
         for toot, cluster_index in zip(toots, cluster_indices):
@@ -28,15 +42,11 @@ class TopicCluster(base.BaseAlgorithm):
                 for i_cluster, cluster_label in self.labels.items()
             ]
         )
-        return context.templates.TemplateResponse("toot_clusters.html", {
-            "clusters": toot_clusters,
-            "request": context.request,
-            "link_style": context.link_style,
-        })
+        return ClusterRenderer(clusters=toot_clusters.clusters, context=context)
 
     @classmethod
-    def train(cls, toots: list[core.Toot], args: dict[str, str]) -> "TopicCluster":
-        toots = [toot for toot in toots if toot.embedding is not None]
+    def train(cls, context: base.TrainContext, args: dict[str, str]) -> "TopicCluster":
+        toots = [toot for toot in context.get_toots() if toot.embedding is not None]
         print("lengths:", {len(toot.embedding) for toot in toots})
 
         n_clusters = int(args["num_clusters"])

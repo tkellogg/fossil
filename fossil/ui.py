@@ -1,4 +1,5 @@
-from datetime import timedelta, datetime
+import datetime
+import re
 import urllib.parse
 
 import pydantic
@@ -6,29 +7,29 @@ import streamlit as st
 
 from . import core, config
 
-def get_time_frame() -> timedelta:
+def get_time_frame() -> datetime.timedelta:
     time_frame = st.radio("Show last:", ["6 hours", "day", "week"], horizontal=True)
     
     if time_frame == "6 hours":
-        return timedelta(hours=6)
+        return datetime.timedelta(hours=6)
     elif time_frame == "day":
-        return timedelta(days=1)
+        return datetime.timedelta(days=1)
     elif time_frame == "week":
-        return timedelta(weeks=1)
+        return datetime.timedelta(weeks=1)
     raise ValueError("Invalid time frame")
 
 
-def time_ago(dt: datetime) -> str:
-    current_time = datetime.utcnow()
+def time_ago(dt: datetime.datetime) -> str:
+    current_time = datetime.datetime.utcnow()
     time_ago = current_time - dt
 
     # Convert the time difference to a readable string
-    if time_ago < timedelta(minutes=1):
+    if time_ago < datetime.timedelta(minutes=1):
         time_ago_str = "just now"
-    elif time_ago < timedelta(hours=1):
+    elif time_ago < datetime.timedelta(hours=1):
         minutes = int(time_ago.total_seconds() / 60)
         time_ago_str = f"{minutes} minutes ago"
-    elif time_ago < timedelta(days=1):
+    elif time_ago < datetime.timedelta(days=1):
         hours = int(time_ago.total_seconds() / 3600)
         time_ago_str = f"{hours} hours ago"
     else:
@@ -36,6 +37,19 @@ def time_ago(dt: datetime) -> str:
         time_ago_str = f"{days} days ago"
 
     return time_ago_str
+
+
+def timedelta(time_span: str) -> datetime.timedelta:
+    hour_pattern = re.compile(r"(\d+)h")
+    day_pattern = re.compile(r"(\d+)d")
+    week_pattern = re.compile(r"(\d+)w")
+    if m := hour_pattern.match(time_span):
+        return datetime.timedelta(hours=int(m.group(1)))
+    elif m := day_pattern.match(time_span):
+        return datetime.timedelta(days=int(m.group(1)))
+    elif m := week_pattern.match(time_span):
+        return datetime.timedelta(weeks=int(m.group(1)))
+    raise ValueError("Invalid time frame")
 
 
 class LinkStyle:
@@ -83,14 +97,14 @@ class TootClusters(pydantic.BaseModel):
         return sum(len(c.toots) for c in self.clusters)
 
     @property
-    def max_date(self) -> datetime:
+    def max_date(self) -> datetime.datetime:
         seq = [t.created_at for c in self.clusters for t in c.toots]
-        return max(seq) if len(seq) > 0 else datetime.utcnow()
+        return max(seq) if len(seq) > 0 else datetime.datetime.utcnow()
 
     @property
-    def min_date(self) -> datetime:
+    def min_date(self) -> datetime.datetime:
         seq = [t.created_at for c in self.clusters for t in c.toots]
-        return min(seq) if len(seq) > 0 else datetime.utcnow()
+        return min(seq) if len(seq) > 0 else datetime.datetime.utcnow()
 
 
 def display_toot(toot: core.Toot, link_style: LinkStyle):
@@ -122,7 +136,7 @@ def display_toot(toot: core.Toot, link_style: LinkStyle):
 def all_toot_summary(toots: list[core.Toot]):
     latest_date = max(t.created_at for t in toots)
     earliest_date = min(t.created_at for t in toots)
-    now = datetime.utcnow()
+    now = datetime.datetime.utcnow()
     msg = f"{len(toots)} toots from {time_ago(earliest_date)} to {time_ago(latest_date)}"
     if latest_date > now:
         st.warning(msg)

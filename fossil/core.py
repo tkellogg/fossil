@@ -18,11 +18,11 @@ logger = logging.getLogger(__name__)
 
 @functools.cache
 def create_database():
-    if os.path.exists("fossil.db"):
+    if os.path.exists(config.DATABASE_PATH):
         return
 
     print("Creating database")
-    with sqlite3.connect("fossil.db") as conn:
+    with sqlite3.connect(config.DATABASE_PATH) as conn:
         c = conn.cursor()
 
         # Create the toots table if it doesn't exist
@@ -113,7 +113,7 @@ class Toot(BaseModel):
     def save(self, init_conn: sqlite3.Connection | None = None) -> bool:
         try:
             if init_conn is None:
-                conn = sqlite3.connect("fossil.db")
+                conn = sqlite3.connect(config.DATABASE_PATH)
             else:
                 conn = init_conn
             create_database()
@@ -152,7 +152,7 @@ class Toot(BaseModel):
     @classmethod
     def get_toots_since(cls, since: datetime.datetime) -> list["Toot"]:
         create_database()
-        with sqlite3.connect("fossil.db") as conn:
+        with sqlite3.connect(config.DATABASE_PATH) as conn:
             c = conn.cursor()
 
             c.execute('''
@@ -181,7 +181,7 @@ class Toot(BaseModel):
     @classmethod
     def get_by_id(cls, id: int) -> Optional["Toot"]:
         create_database()
-        with sqlite3.connect("fossil.db") as conn:
+        with sqlite3.connect(config.DATABASE_PATH) as conn:
             c = conn.cursor()
 
             c.execute('''
@@ -208,7 +208,7 @@ class Toot(BaseModel):
     @staticmethod
     def get_latest_date() -> datetime.datetime | None:
         create_database()
-        with sqlite3.connect("fossil.db") as conn:
+        with sqlite3.connect(config.DATABASE_PATH) as conn:
             c = conn.cursor()
 
             c.execute('''
@@ -219,7 +219,7 @@ class Toot(BaseModel):
             latest_date = result[0] if result[0] else None
 
             if isinstance(latest_date, str):
-                latest_date = datetime.datetime.strptime(latest_date, "%Y-%m-%d %H:%M:%S")
+                latest_date = datetime.datetime.strptime(latest_date, "%Y-%m-%d %H:%M:%S.%f")
             return latest_date
 
     @classmethod
@@ -291,7 +291,7 @@ def download_timeline(since: datetime.datetime):
 
         # Example: Call the _create_embeddings function
         _create_embeddings(page_toots)
-        with sqlite3.connect("fossil.db") as conn:
+        with sqlite3.connect(config.DATABASE_PATH) as conn:
             for toot in page_toots:
                 toot.save(init_conn=conn)
 
@@ -318,7 +318,7 @@ def _create_embeddings(toots: list[Toot]):
 @functools.lru_cache()
 def _create_session_table():
     create_database()
-    with sqlite3.connect("fossil.db") as conn:
+    with sqlite3.connect(config.DATABASE_PATH) as conn:
         c = conn.cursor()
 
         # Create the toots table if it doesn't exist
@@ -342,7 +342,7 @@ class Session(BaseModel):
     def get_by_id(cls, id: str) -> Optional["Session"]:
         create_database()
         _create_session_table()
-        with sqlite3.connect("fossil.db") as conn:
+        with sqlite3.connect(config.DATABASE_PATH) as conn:
             c = conn.cursor()
 
             c.execute('''
@@ -353,8 +353,8 @@ class Session(BaseModel):
             if row:
                 session = cls(
                     id=row[0],
-                    model_spec=row[1],
-                    model=row[2],
+                    algorithm_spec=row[1],
+                    algorithm=row[2],
                 )
                 return session
             return None
@@ -368,25 +368,22 @@ class Session(BaseModel):
         _create_session_table()
         try:
             if init_conn is None:
-                conn = sqlite3.connect("fossil.db")
+                conn = sqlite3.connect(config.DATABASE_PATH)
             else:
                 conn = init_conn
             create_database()
             c = conn.cursor()
 
             c.execute('''
-                DELETE FROM sessions WHERE id = ?
-            ''', (self.id,))
-
-            c.execute('''
                 INSERT INTO sessions (id, algorithm_spec, algorithm)
                 VALUES (?, ?, ?)
+                ON CONFLICT(id) DO UPDATE 
+                    SET algorithm_spec = excluded.algorithm_spec, algorithm = excluded.algorithm
             ''', (self.id, self.algorithm_spec, self.algorithm))
 
+            if init_conn is None:
+                conn.commit()
         except:
             conn.rollback()
             raise
-        finally:
-            if init_conn is None:
-                conn.commit()
         return True

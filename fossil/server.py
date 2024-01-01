@@ -5,12 +5,12 @@ The streamlit version had issues around state management and was genrally slow
 and inflexible. This gives us a lot more control.
 """
 import datetime
-import re
+import importlib
+import json
 from typing import Annotated
 from fastapi import FastAPI, Form, responses, staticfiles, templating, Request
-import pydantic
 
-from fossil import core, ui, science
+from fossil import core, ui
 from fossil import algorithm
 from fossil.algorithm import topic_cluster
 
@@ -61,20 +61,29 @@ async def toots():
 async def toots_download(request: Request):
     core.create_database()
     core.download_timeline(datetime.datetime.utcnow() - datetime.timedelta(days=1))
-    return responses.HTMLResponse("<div>Load More</div>")
-
-
-def timedelta(time_span: str) -> datetime.timedelta:
-    hour_pattern = re.compile(r"(\d+)h")
-    day_pattern = re.compile(r"(\d+)d")
-    week_pattern = re.compile(r"(\d+)w")
-    if m := hour_pattern.match(time_span):
-        return datetime.timedelta(hours=int(m.group(1)))
-    elif m := day_pattern.match(time_span):
-        return datetime.timedelta(days=int(m.group(1)))
-    elif m := week_pattern.match(time_span):
-        return datetime.timedelta(weeks=int(m.group(1)))
-    raise ValueError("Invalid time frame")
+    session: core.Session = request.state.session
+    algorithm_spec = json.loads(session.algorithm_spec) if session.algorithm_spec else {}
+    body_params: dict[str, str] = dict((await request.form()))
+    print("algorithm_spec", algorithm_spec)
+    if "module" in algorithm_spec and "class_name" in algorithm_spec:
+        mod = importlib.import_module(algorithm_spec["module"])
+        model: algorithm.BaseAlgorithm = getattr(mod, algorithm_spec["class_name"]).train(
+            algorithm.TrainContext(
+                end_time=datetime.datetime.utcnow(),
+                timedelta=datetime.timedelta(days=1),
+            ),
+            algorithm_spec["kwargs"],
+        )
+        timespan = ui.timedelta(body_params["time_span"])
+        timeline = core.Toot.get_toots_since(datetime.datetime.utcnow() - timespan)
+        renderable = model.render(timeline, algorithm.RenderContext(
+            templates=templates,
+            request=request,
+            link_style=ui.LinkStyle(body_params["link_style"] if "link_style" in body_params else "Desktop"),
+        ))
+        return renderable.render()
+    else:
+        return responses.HTMLResponse("<div>Load More</div>")
 
 
 @app.post("/toots/train")
@@ -83,7 +92,10 @@ async def toots_train(
     time_span: Annotated[str, Form()],
     request: Request,
 ):
-    toots = core.Toot.get_toots_since(datetime.datetime.utcnow() - timedelta(time_span))
+    context = algorithm.TrainContext(
+        end_time=datetime.datetime.utcnow(),
+        timedelta=ui.timedelta(time_span),
+    )
 
     algo_kwargs = {k: v for k, v in dict((await request.form())).items() 
                    if k not in {"link_style", "time_span"}}
@@ -91,15 +103,23 @@ async def toots_train(
 
     # train
     session: core.Session = request.state.session
-    model = topic_cluster.TopicCluster.train(toots, algo_kwargs)
+    model = topic_cluster.TopicCluster.train(context, algo_kwargs)
     session.algorithm = model.serialize()
+    session.algorithm_spec = json.dumps({
+        "module": model.__class__.__module__,
+        "class_name": model.__class__.__qualname__,
+        "kwargs": algo_kwargs,
+    })
+    session.save()
 
     # render
-    return model.render(toots, algorithm.RenderContext(
+    timeline = core.Toot.get_toots_since(datetime.datetime.utcnow() - ui.timedelta(time_span))
+    renderable = model.render(timeline, algorithm.RenderContext(
         templates=templates,
         request=request,
         link_style=ui.LinkStyle(link_style),
     ))
+    return renderable.render()
 
 
 @app.post("/toots/{id}/debug")

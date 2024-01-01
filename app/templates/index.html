@@ -4,10 +4,10 @@
 {% block content %}
   <!-- Your content goes here -->
   <section>
-    <button hx-post="/toots/download" hx-swap="innerHTML" hx-target="#load_more_button" id="load_more_button" hx-indicator="#downloadspinner">Load More</button>
+    <button hx-post="/toots/download" hx-swap="innerHTML" hx-target="#toots" hx-include="#model-params" id="load_more_button" hx-indicator="#downloadspinner">Load More</button>
     <img src="/static/work-in-progress.gif" class="spinner" id="downloadspinner" /> 
 
-    <form hx-post="/toots/train" hx-target="#toots" hx-swap="innerHTML">
+    <form hx-post="/toots/train" hx-target="#toots" hx-swap="innerHTML" id="model-params">
 
       <div class="radio">
         <div>
