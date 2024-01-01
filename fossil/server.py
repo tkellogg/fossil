@@ -45,10 +45,13 @@ async def root(request: Request):
         templates=templates,
         request=request,
         link_style=ui.LinkStyle("Desktop"),
+        session=request.state.session,
     )
+    session: core.Session = request.state.session
     return templates.TemplateResponse("index.html", {
         "request": request,
         "model_params": topic_cluster.TopicCluster.render_model_params(ctx).body.decode("utf-8"),
+        "ui_settings": session.get_ui_settings(),
     })
 
 
@@ -64,6 +67,7 @@ async def toots_download(request: Request):
     session: core.Session = request.state.session
     algorithm_spec = json.loads(session.algorithm_spec) if session.algorithm_spec else {}
     body_params: dict[str, str] = dict((await request.form()))
+    session.set_ui_settings(body_params)
     print("algorithm_spec", algorithm_spec)
     if "module" in algorithm_spec and "class_name" in algorithm_spec:
         mod = importlib.import_module(algorithm_spec["module"])
@@ -80,10 +84,11 @@ async def toots_download(request: Request):
             templates=templates,
             request=request,
             link_style=ui.LinkStyle(body_params["link_style"] if "link_style" in body_params else "Desktop"),
+            session=session,
         ))
         return renderable.render()
     else:
-        return responses.HTMLResponse("<div>Load More</div>")
+        return responses.HTMLResponse("<div>No Toots 😥</div>")
 
 
 @app.post("/toots/train")
@@ -118,6 +123,7 @@ async def toots_train(
         templates=templates,
         request=request,
         link_style=ui.LinkStyle(link_style),
+        session=session,
     ))
     return renderable.render()
 

@@ -1,5 +1,6 @@
 import datetime
 import functools
+import json
 import logging
 import sqlite3
 from typing import Optional
@@ -219,7 +220,10 @@ class Toot(BaseModel):
             latest_date = result[0] if result[0] else None
 
             if isinstance(latest_date, str):
-                latest_date = datetime.datetime.strptime(latest_date, "%Y-%m-%d %H:%M:%S.%f")
+                try:
+                    latest_date = datetime.datetime.strptime(latest_date, "%Y-%m-%d %H:%M:%S.%f")
+                except ValueError:
+                    latest_date = datetime.datetime.strptime(latest_date, "%Y-%m-%d %H:%M:%S")
             return latest_date
 
     @classmethod
@@ -326,7 +330,8 @@ def _create_session_table():
             CREATE TABLE IF NOT EXISTS sessions (
                 id TEXT PRIMARY KEY,
                 algorithm_spec TEXT,
-                algorithm BLOB
+                algorithm BLOB,
+                ui_settings TEXT
             )
         ''')
 
@@ -337,6 +342,14 @@ class Session(BaseModel):
     id: str
     algorithm_spec: str | None = None
     algorithm: bytes | None = None
+    ui_settings: str | None = None
+
+    def set_ui_settings(self, ui_settings: dict[str, str]):
+        self.ui_settings = json.dumps(ui_settings)
+        self.save()
+
+    def get_ui_settings(self) -> dict[str, str]:
+        return json.loads(self.ui_settings or "{}")
 
     @classmethod
     def get_by_id(cls, id: str) -> Optional["Session"]:
@@ -346,7 +359,7 @@ class Session(BaseModel):
             c = conn.cursor()
 
             c.execute('''
-                SELECT id, algorithm_spec, algorithm FROM sessions WHERE id = ?
+                SELECT id, algorithm_spec, algorithm, ui_settings FROM sessions WHERE id = ?
             ''', (id,))
 
             row = c.fetchone()
@@ -355,6 +368,7 @@ class Session(BaseModel):
                     id=row[0],
                     algorithm_spec=row[1],
                     algorithm=row[2],
+                    ui_settings=row[3],
                 )
                 return session
             return None
@@ -375,11 +389,13 @@ class Session(BaseModel):
             c = conn.cursor()
 
             c.execute('''
-                INSERT INTO sessions (id, algorithm_spec, algorithm)
-                VALUES (?, ?, ?)
+                INSERT INTO sessions (id, algorithm_spec, algorithm, ui_settings)
+                VALUES (?, ?, ?, ?)
                 ON CONFLICT(id) DO UPDATE 
-                    SET algorithm_spec = excluded.algorithm_spec, algorithm = excluded.algorithm
-            ''', (self.id, self.algorithm_spec, self.algorithm))
+                    SET algorithm_spec = excluded.algorithm_spec
+                      , algorithm = excluded.algorithm
+                      , ui_settings = excluded.ui_settings
+            ''', (self.id, self.algorithm_spec, self.algorithm, self.ui_settings))
 
             if init_conn is None:
                 conn.commit()

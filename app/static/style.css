@@ -22,6 +22,11 @@ a {
     padding: 0.5rem;
 }
 
+.model-param-label {
+    padding-top: 2rem;
+    padding-left: 2rem;
+}
+
 /********
 Toot display
 *********/
@@ -86,6 +91,10 @@ Cluster
     cursor: pointer;
     position: sticky;
     top: 0;
+
+    /* HACK: I'd rather only control the height when sticky, but that seems hard */
+    max-height: 5em; 
+    overflow: scroll; 
 }
 
 .cluster[data-open="false"] .title {

@@ -11,45 +11,50 @@
 
       <div class="radio">
         <div>
-          <input type="radio" id="desktop" name="link_style" value="desktop" checked>
+          <input type="radio" id="desktop" name="link_style" value="desktop" {% if ui_settings.link_style == "desktop" or not ui_settings.link_style %}checked{% endif %}>
           <label for="desktop">Desktop</label>
         </div>
         <div>
-          <input type="radio" id="ivory" name="link_style" value="ivory">
+          <input type="radio" id="ivory" name="link_style" value="ivory" {% if ui_settings.link_style == "ivory" %}checked{% endif %}>
           <label for="ivory">Ivory</label>
         </div>
         <div>
-          <input type="radio" id="native" name="link_style" value="native">
+          <input type="radio" id="native" name="link_style" value="native" {% if ui_settings.link_style == "native" %}checked{% endif %}>
           <label for="native">Native</label>
         </div>
       </div>
 
       <div class="radio">
         <div>
-          <input type="radio" id="6h" name="time_span" value="6h" checked>
+          <input type="radio" id="6h" name="time_span" value="6h" {% if ui_settings.time_span == "6h" or not ui_settings.time_span %}checked{% endif %}>
           <label for="6h">6 Hours</label>
         </div>
         <div>
-          <input type="radio" id="12h" name="time_span" value="12h">
+          <input type="radio" id="12h" name="time_span" value="12h" {% if ui_settings.time_span == "12h" %}checked{% endif %}>
           <label for="12h">12 Hours</label>
         </div>
         <div>
-          <input type="radio" id="24h" name="time_span" value="24h">
+          <input type="radio" id="24h" name="time_span" value="24h" {% if ui_settings.time_span == "24h" %}checked{% endif %}>
           <label for="24h">Day</label>
         </div>
         <div>
-          <input type="radio" id="1w" name="time_span" value="1w">
+          <input type="radio" id="1w" name="time_span" value="1w" {% if ui_settings.time_span == "1w" %}checked{% endif %}>
           <label for="1w">Week</label>
         </div>
       </div>
 
-      {% autoescape false %}
-        {{ model_params }}
-      {% endautoescape %}
+      <div class="model-param-label">
+        Model Settings
+        <div class="model-params">
+          {% autoescape false %}
+            {{ model_params }}
+          {% endautoescape %}
 
-      <button type="submit" hx-indicator="#trainspinner">
-        Train Algorithm
-      </button>
+          <button type="submit" hx-indicator="#trainspinner">
+            Re-Train Algorithm
+          </button>
+        </div>
+      </div>
       <img src="/static/work-in-progress.gif" class="spinner" id="trainspinner" /> 
 
     </form>

@@ -18,6 +18,7 @@ class RenderContext(pydantic.BaseModel):
     templates: templating.Jinja2Templates
     request: Request
     link_style: ui.LinkStyle
+    session: core.Session
 
     def template_args(self) -> dict:
         return {

@@ -77,10 +77,11 @@ class TopicCluster(base.BaseAlgorithm):
 
     @staticmethod
     def render_model_params(context: base.RenderContext) -> Response:
-        return responses.HTMLResponse("""
+        default = context.session.get_ui_settings().get("num_clusters", "15")
+        return responses.HTMLResponse(f"""
             <div class="slider">
-                <input type="range" name="num_clusters" id="num_clusters" min="0" max="20" value="15" onchange="document.getElementById('num_clusters_value').innerHTML = this.value">
-                <span><span class="slider-value" id="num_clusters_value">15</span> clusters</span>
+                <input type="range" name="num_clusters" id="num_clusters" min="0" max="20" value="{default}" onchange="document.getElementById('num_clusters_value').innerHTML = this.value">
+                <span><span class="slider-value" id="num_clusters_value">{default}</span> clusters</span>
             </div>
         """)
 
