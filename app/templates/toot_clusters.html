@@ -24,7 +24,6 @@
         <div class="content">
             {% set toots = cluster.toots %}
             {% include 'toot_list.html' %}
-            <button onclick="toggleCluster('cluster-{{ cluster.id }}'); document.querySelector('#cluster-{{ cluster.id }}').scrollIntoView({block: 'center'})">Close</button>
         </div>
     </div>
 {% endfor %}

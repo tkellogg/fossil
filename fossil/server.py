@@ -134,4 +134,4 @@ async def toots_debug(id: int):
     if toot is not None:
         import json
         print(json.dumps(toot.orig_dict, indent=2))
-    return responses.JSONResponse({"data": "ok."})
+    return responses.HTMLResponse("<div>💯</div>")

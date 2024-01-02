@@ -8,7 +8,7 @@
             {{ toot.content }}
         {% endautoescape %}
         <div class="attachments">
-            {% for attachment in toot.attachments %}
+            {% for attachment in toot.media_attachments %}
                 <a href="{{ attachment.url }}"><img src="{{ attachment.preview_url }}"/></a>
             {% else %}
                 {% if toot.card_url %}
