@@ -1,4 +1,5 @@
 from fastapi import Response, responses
+import llm
 import numpy as np
 import openai
 import pydantic
@@ -57,20 +58,15 @@ class TopicCluster(base.BaseAlgorithm):
         kmeans = KMeans(n_clusters=n_clusters)
         cluster_labels = kmeans.fit_predict(embeddings)
 
-        client = openai.OpenAI(api_key=config.OPENAI_KEY)
         labels: dict[int, str] = {}
+        model = llm.get_model(config.SUMMARIZE_MODEL.name)
         for i_clusters in range(n_clusters):
             clustered_toots = [toot for toot, cluster_label in zip(toots, cluster_labels) if cluster_label == i_clusters]
             combined_text = "\n\n".join([toot.content for toot in clustered_toots])
 
             # Use GPT-3.5-turbo to summarize the combined text
             prompt = f"Create a single label that describes all of these related tweets, make it succinct but descriptive. The label should describe all {len(clustered_toots)} of these\n\n{combined_text}"
-            response = client.chat.completions.create(
-                model=config.SUMMARIZE_MODEL.name,
-                messages=[{"role": "user", "content": reduce_size(prompt)}],
-                max_tokens=100,
-            )
-            summary = response.choices[0].message.content.strip()
+            summary = model.prompt(reduce_size(prompt)).text().strip()
             labels[i_clusters] = summary
 
         return cls(kmeans=kmeans, labels=labels)

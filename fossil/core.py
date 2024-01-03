@@ -5,6 +5,7 @@ import logging
 import sqlite3
 from typing import Optional
 import html2text
+import llm
 import numpy as np
 
 import requests
@@ -12,7 +13,6 @@ import requests
 from fossil import config
 import os
 from pydantic import BaseModel
-import openai
 
 logger = logging.getLogger(__name__)
 
@@ -302,18 +302,16 @@ def download_timeline(since: datetime.datetime):
 
 def _create_embeddings(toots: list[Toot]):
     # Convert the list of toots to a single string
-    client = openai.OpenAI(api_key=config.OPENAI_KEY)
     toots = [t for t in toots if t.content]
 
-    # Call the OpenAI Text Embedding API to create embeddings
-    response = client.embeddings.create(input=[html2text.html2text(t.content) for t in toots], model=config.EMBEDDING_MODEL.name)
-
+    # Call the llm embedding API to create embeddings
+    emb_model = llm.get_embedding_model(config.EMBEDDING_MODEL.name)
+    embeddings = list(emb_model.embed_batch([html2text.html2text(t.content) for t in toots]))
 
     # Extract the embeddings from the API response
-    print(f"got {len(response.data)} embeddings")
-    embeddings = [np.array(embedding.embedding) for embedding in response.data]
+    print(f"got {len(embeddings)} embeddings")
     for i, toot in enumerate(toots):
-        toot.embedding = embeddings[i]
+        toot.embedding = np.array(embeddings[i])
 
     # Return the embeddings
     return toots

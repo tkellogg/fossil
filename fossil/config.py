@@ -23,7 +23,7 @@ class Model(pydantic.BaseModel):
 
 ALL_MODELS: dict[str, Model] = {m.name: m for m in [
     Model(name="gpt-3.5-turbo", context_length=4097),
-    Model(name="text-embedding-ada-002", context_length=8191),
+    Model(name="ada-002", context_length=8191),
 ]}
 
 DATABASE_PATH = get_config().get("DATABASE_PATH", "fossil.db")
@@ -36,5 +36,5 @@ OPENAI_KEY = get_config()["OPENAI_KEY"]
 # Optional keys in either .env or environment variables
 OPENAI_API_BASE = get_config().get("OPENAI_API_BASE", "https://api.openai.com/v1")
 MASTO_BASE = get_config().get("MASTO_BASE", "https://hachyderm.io")
-EMBEDDING_MODEL = ALL_MODELS[get_config().get("EMBEDDING_MODEL", "text-embedding-ada-002")]
+EMBEDDING_MODEL = ALL_MODELS[get_config().get("EMBEDDING_MODEL", "ada-002")]
 SUMMARIZE_MODEL = ALL_MODELS[get_config().get("SUMMARIZE_MODEL", "gpt-3.5-turbo")]
