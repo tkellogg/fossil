@@ -5,8 +5,8 @@ import openai
 import pydantic
 from sklearn.cluster import KMeans
 import tiktoken
-from fossil import config, core, ui
-from fossil.algorithm import base
+from fossil_mastodon import config, core, ui
+from fossil_mastodon.algorithm import base
 
 
 class ClusterRenderer(base.Renderable, pydantic.BaseModel):

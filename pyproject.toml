@@ -1,10 +1,11 @@
 [tool.poetry]
-name = "fossil"
+name = "fossil-mastodon"
 version = "0.1.0"
 description = "A mastodon reader client that uses embeddings to present a consolidated view of my mastodon timeline"
 authors = ["Tim Kellogg <timothy.kellogg@gmail.com>"]
 license = "MIT"
 readme = "README.md"
+include = ["**/*.css", "**/*.js", "**/*.html"]
 
 [tool.poetry.dependencies]
 python = "^3.10"

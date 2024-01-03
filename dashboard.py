@@ -1,5 +1,5 @@
 import datetime
-from fossil import config, core, science, ui
+from fossil_mastodon import config, core, science, ui
 import streamlit as st
 import datetime
 import random

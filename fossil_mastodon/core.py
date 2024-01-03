@@ -10,7 +10,7 @@ import numpy as np
 
 import requests
 
-from fossil import config
+from fossil_mastodon import config
 import os
 from pydantic import BaseModel
 

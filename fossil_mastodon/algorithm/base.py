@@ -6,7 +6,7 @@ import sqlite3
 from fastapi import templating, Response, responses, Request
 import pydantic
 
-from fossil import config, core, ui
+from fossil_mastodon import config, core, ui
 
 
 class RenderContext(pydantic.BaseModel):

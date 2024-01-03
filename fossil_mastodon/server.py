@@ -10,16 +10,15 @@ import json
 from typing import Annotated
 from fastapi import FastAPI, Form, responses, staticfiles, templating, Request
 
-from fossil import core, ui
-from fossil import algorithm
-from fossil.algorithm import topic_cluster
+from fossil_mastodon import config, core, ui, algorithm
+from fossil_mastodon.algorithm import topic_cluster
 
 
 app = FastAPI()
 
 
-app.mount("/static", staticfiles.StaticFiles(directory="app/static"), name="static")
-templates = templating.Jinja2Templates(directory="app/templates")
+app.mount("/static", staticfiles.StaticFiles(directory=config.ASSETS.assets_path), name="static")
+templates = templating.Jinja2Templates(directory=config.ASSETS.templates_path)
 templates.env.filters["rel_date"] = ui.time_ago
 
 
