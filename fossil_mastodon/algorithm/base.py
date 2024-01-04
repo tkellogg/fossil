@@ -10,9 +10,7 @@ from fastapi import templating, Response, responses, Request
 import pkg_resources
 import pydantic
 
-from fossil_mastodon import config, core
-if typing.TYPE_CHECKING:
-    from fossil_mastodon import ui
+from fossil_mastodon import config, core, ui
 
 
 class RenderContext(pydantic.BaseModel):
@@ -23,7 +21,7 @@ class RenderContext(pydantic.BaseModel):
         arbitrary_types_allowed = True
     templates: templating.Jinja2Templates
     request: Request
-    link_style: "ui.LinkStyle"
+    link_style: ui.LinkStyle
     session: core.Session
 
     def template_args(self) -> dict:
