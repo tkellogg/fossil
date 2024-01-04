@@ -20,7 +20,7 @@
     <div class="button-bar">
         <a href="{{ link_style.toot_url(toot) }}"><button>🔗</button></a>
         <button>⭐️</button>
-        <button>️🔁</button>
+        <button hx-post="/toots/{{ toot.id }}/boost">️🔁</button>
         <button hx-post="/toots/{{ toot.id }}/debug">🪲</button>
     </div>
 </div>

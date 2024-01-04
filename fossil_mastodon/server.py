@@ -9,6 +9,8 @@ import importlib
 import json
 from typing import Annotated
 from fastapi import FastAPI, Form, responses, staticfiles, templating, Request
+import requests
+
 
 from fossil_mastodon import config, core, ui, algorithm
 
@@ -153,3 +155,19 @@ async def toots_debug(id: int):
         import json
         print(json.dumps(toot.orig_dict, indent=2))
     return responses.HTMLResponse("<div>💯</div>")
+
+@app.post("/toots/{id}/boost")
+async def toots_boost(id: int):
+    toot = core.Toot.get_by_id(id)
+    if toot is not None:
+        from config import ACCESS_TOKEN, MASTO_BASE
+        url = f'{MASTO_BASE}/api/v1/statuses'
+        data = {
+            'status': toot.content
+        }
+        headers = {
+            'Authorization': f'Bearer {ACCESS_TOKEN}'
+        }
+        response = requests.post(url, data=data, headers=headers)
+
+    return responses.HTMLResponse("<div>🚀</div>")
