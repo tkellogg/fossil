@@ -1,4 +1,3 @@
-
 {% extends "base/page.html" %}
 
 {% block content %}
@@ -45,15 +44,28 @@
 
       <div class="model-param-label">
         Model Settings
-        <div class="model-params">
+        <div>
+          <select name="algorithm" id="algorithm">
+            {% for algo in algorithms %}
+              <option 
+                value="{{ algo.name }}" 
+                {% if algo.name == selected_algorithm %}selected{% endif %}
+                hx-get="/algorithm/{{ algo.name }}/form"
+                hx-target="#algorithm-widgets"
+                hx-swap="innerHTML"
+              >{{ algo.display_name }}</option>
+            {% endfor %}
+          </select>
+        </div>
+        <div class="model-params" id="algorithm-widgets">
           {% autoescape false %}
             {{ model_params }}
           {% endautoescape %}
-
-          <button type="submit" hx-indicator="#trainspinner">
-            Re-Train Algorithm
-          </button>
         </div>
+
+        <button type="submit" hx-indicator="#trainspinner">
+          Re-Train Algorithm
+        </button>
       </div>
       <img src="/static/work-in-progress.gif" class="spinner" id="trainspinner" /> 
 

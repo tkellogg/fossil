@@ -1,9 +1,11 @@
 import datetime
 import functools
+import importlib
 import json
 import logging
 import sqlite3
-from typing import Optional
+from typing import Optional, Type
+import typing
 import html2text
 import llm
 import numpy as np
@@ -11,6 +13,8 @@ import numpy as np
 import requests
 
 from fossil_mastodon import config
+if typing.TYPE_CHECKING:
+    from fossil_mastodon.algorithm import base
 import os
 from pydantic import BaseModel
 
@@ -348,6 +352,25 @@ class Session(BaseModel):
 
     def get_ui_settings(self) -> dict[str, str]:
         return json.loads(self.ui_settings or "{}")
+
+    def get_algorithm_type(self) -> Type["base.BaseAlgorithm"] | None:
+        spec = json.loads(self.algorithm_spec) if self.algorithm_spec else {}
+        if "module" in spec and "class_name" in spec:
+            mod = importlib.import_module(spec["module"])
+            return getattr(mod, spec["class_name"])
+        return None
+
+    def set_algorithm_by_name(self, name: str) -> Type["base.BaseAlgorithm"] | None:
+        from fossil_mastodon.algorithm import base
+        algo = next((algo for algo in base.get_algorithms() if algo.get_name() == name), None)
+        self.algorithm_spec = json.dumps({
+            "module": algo.__module__,
+            "class_name": algo.__name__,
+            "kwargs": {},
+        })
+        self.algorithm = None
+        self.save()
+        return algo
 
     @classmethod
     def get_by_id(cls, id: str) -> Optional["Session"]:

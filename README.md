@@ -98,4 +98,10 @@ If you installed from source:
 poetry run uvicorn --host 0.0.0.0 --port 8888 --reload fossil_mastodon.server:app
 ```
 
+If you're working on CSS or HTML files, you should include them:
+
+```
+poetry run uvicorn --host 0.0.0.0 --port 8888 --reload --reload-include '*.html' --reload-include '*.css' fossil_mastodon.server:app
+```
+
 (Note the `--reload` makes it much easier to develop, but is generally unneccessary if you're not developing)

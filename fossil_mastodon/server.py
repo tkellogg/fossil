@@ -11,7 +11,6 @@ from typing import Annotated
 from fastapi import FastAPI, Form, responses, staticfiles, templating, Request
 
 from fossil_mastodon import config, core, ui, algorithm
-from fossil_mastodon.algorithm import topic_cluster
 
 
 app = FastAPI()
@@ -40,17 +39,23 @@ async def session_middleware(request: Request, call_next):
 
 @app.get("/")
 async def root(request: Request):
+    session: core.Session = request.state.session
     ctx = algorithm.RenderContext(
         templates=templates,
         request=request,
         link_style=ui.LinkStyle("Desktop"),
-        session=request.state.session,
+        session=session,
     )
-    session: core.Session = request.state.session
+    algo = session.get_algorithm_type() or algorithm.get_algorithms()[0]
     return templates.TemplateResponse("index.html", {
         "request": request,
-        "model_params": topic_cluster.TopicCluster.render_model_params(ctx).body.decode("utf-8"),
+        "model_params": algo.render_model_params(ctx).body.decode("utf-8"),
         "ui_settings": session.get_ui_settings(),
+        "selected_algorithm": algo,
+        "algorithms": [
+            {"name": algo.get_name(), "display_name": algo.get_display_name()}
+            for algo in algorithm.get_algorithms()
+        ],
     })
 
 
@@ -107,7 +112,8 @@ async def toots_train(
 
     # train
     session: core.Session = request.state.session
-    model = topic_cluster.TopicCluster.train(context, algo_kwargs)
+    algo = session.get_algorithm_type() or algorithm.get_algorithms()[0]
+    model = algo.train(context, algo_kwargs)
     session.algorithm = model.serialize()
     session.algorithm_spec = json.dumps({
         "module": model.__class__.__module__,
@@ -125,6 +131,19 @@ async def toots_train(
         session=session,
     ))
     return renderable.render()
+
+
+@app.get("/algorithm/{name}/form")
+async def algorithm_form(name: str, request: Request):
+    session: core.Session = request.state.session
+    algo_type = session.get_algorithm_type() or algorithm.get_algorithms()[0]
+    ctx = algorithm.RenderContext(
+        templates=templates,
+        request=request,
+        link_style=ui.LinkStyle(session.get_ui_settings().get("link_style", "Desktop")),
+        session=session,
+    )
+    return algo_type.render_model_params(ctx)
 
 
 @app.post("/toots/{id}/debug")

@@ -1,12 +1,18 @@
 import abc
 import datetime
+import functools
 import pickle
 import sqlite3
+import traceback
+import typing
 
 from fastapi import templating, Response, responses, Request
+import pkg_resources
 import pydantic
 
-from fossil_mastodon import config, core, ui
+from fossil_mastodon import config, core
+if typing.TYPE_CHECKING:
+    from fossil_mastodon import ui
 
 
 class RenderContext(pydantic.BaseModel):
@@ -17,7 +23,7 @@ class RenderContext(pydantic.BaseModel):
         arbitrary_types_allowed = True
     templates: templating.Jinja2Templates
     request: Request
-    link_style: ui.LinkStyle
+    link_style: "ui.LinkStyle"
     session: core.Session
 
     def template_args(self) -> dict:
@@ -79,6 +85,10 @@ class BaseAlgorithm(abc.ABC):
     def get_name(cls) -> str:
         return cls.__name__
 
+    @classmethod
+    def get_display_name(cls) -> str:
+        return cls.get_name()
+
     @abc.abstractmethod
     def render(self, toots: list[core.Toot], context: RenderContext) -> Renderable:
         """
@@ -103,7 +113,8 @@ class BaseAlgorithm(abc.ABC):
         """
         raise NotImplementedError()
 
-    def render_model_params(self, context: RenderContext) -> Response:
+    @classmethod
+    def render_model_params(cls, context: RenderContext) -> Response:
         """
         Optionally, you can render HTML input elements that capture http_args passed 
         to train(). This is useful if your agorithm has hyperparameters that you want
@@ -117,3 +128,22 @@ class BaseAlgorithm(abc.ABC):
     @staticmethod
     def deserialize(data: bytes) -> "BaseAlgorithm":
         return pickle.loads(data)
+
+
+@functools.lru_cache
+def get_algorithms() -> list[typing.Type[BaseAlgorithm]]:
+    """
+    Load all algorithms from the fossil_mastodon.algorithm package.
+    """
+    algorithms = []
+    for entry_point in pkg_resources.iter_entry_points("fossil_mastodon.algorithms"):
+        try:
+            algo = entry_point.load()
+            if issubclass(algo, BaseAlgorithm):
+                algorithms.append(algo)
+            else:
+                print(f"Error loading algorithm {entry_point.name}: not a subclass of BaseAlgorithm")
+        except:
+            print(f"Error loading algorithm {entry_point.name}")
+            traceback.print_exc()
+    return algorithms
