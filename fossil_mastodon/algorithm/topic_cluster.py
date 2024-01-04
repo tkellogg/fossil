@@ -1,7 +1,6 @@
 from fastapi import Response, responses
 import llm
 import numpy as np
-import openai
 import pydantic
 from sklearn.cluster import KMeans
 import tiktoken
