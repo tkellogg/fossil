@@ -8,7 +8,7 @@ import datetime
 import importlib
 import json
 from typing import Annotated
-from fastapi import FastAPI, Form, responses, staticfiles, templating, Request
+from fastapi import FastAPI, Form, responses, staticfiles, templating, Request, HTTPException
 import requests
 
 
@@ -168,8 +168,9 @@ async def toots_boost(id: int):
         response = requests.post(url, json=data, headers=headers())
         try:
             response.raise_for_status()
+            return responses.HTMLResponse("<div>🚀</div>")
         except:
             print("ERROR:", response.json())
             raise
-
-    return responses.HTMLResponse("<div>🚀</div>")
+    raise HTTPException(status_code=404, detail="Toot not found")
+    
