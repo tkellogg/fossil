@@ -8,7 +8,9 @@ import datetime
 import importlib
 import json
 from typing import Annotated
-from fastapi import FastAPI, Form, responses, staticfiles, templating, Request
+from fastapi import FastAPI, Form, responses, staticfiles, templating, Request, HTTPException
+import requests
+
 
 from fossil_mastodon import config, core, ui, algorithm
 
@@ -153,3 +155,22 @@ async def toots_debug(id: int):
         import json
         print(json.dumps(toot.orig_dict, indent=2))
     return responses.HTMLResponse("<div>💯</div>")
+
+@app.post("/toots/{id}/boost")
+async def toots_boost(id: int):
+    toot = core.Toot.get_by_id(id)
+    if toot is not None:
+        from fossil_mastodon.config import MASTO_BASE, headers
+        url = f'{MASTO_BASE}/api/v1/statuses/{id}/reblog'
+        data = {
+            'visibility': 'public'
+        }
+        response = requests.post(url, json=data, headers=headers())
+        try:
+            response.raise_for_status()
+            return responses.HTMLResponse("<div>🚀</div>")
+        except:
+            print("ERROR:", response.json())
+            raise
+    raise HTTPException(status_code=404, detail="Toot not found")
+    
