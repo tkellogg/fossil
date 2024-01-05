@@ -160,14 +160,16 @@ async def toots_debug(id: int):
 async def toots_boost(id: int):
     toot = core.Toot.get_by_id(id)
     if toot is not None:
-        from config import ACCESS_TOKEN, MASTO_BASE
+        from fossil_mastodon.config import ACCESS_TOKEN, MASTO_BASE, headers
         url = f'{MASTO_BASE}/api/v1/statuses'
         data = {
             'status': toot.content
         }
-        headers = {
-            'Authorization': f'Bearer {ACCESS_TOKEN}'
-        }
-        response = requests.post(url, data=data, headers=headers)
+        response = requests.post(url, data=data, headers=headers())
+        try:
+            response.raise_for_status()
+        except:
+            print("ERROR:", response.json())
+            raise
 
     return responses.HTMLResponse("<div>🚀</div>")
