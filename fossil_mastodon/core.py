@@ -55,9 +55,9 @@ def _get_json(toot: "Toot") -> dict:
 
 
 class MediaAttatchment(BaseModel):
-    type: str
-    preview_url: str
-    url: str
+    type: str | None
+    preview_url: str | None
+    url: str | None
 
 
 class Toot(BaseModel):

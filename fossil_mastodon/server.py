@@ -161,7 +161,7 @@ async def toots_boost(id: int):
     toot = core.Toot.get_by_id(id)
     if toot is not None:
         from fossil_mastodon.config import MASTO_BASE, headers
-        url = f'{MASTO_BASE}/api/v1/statuses/{id}/reblog'
+        url = f'{MASTO_BASE}/api/v1/statuses/{toot.toot_id}/reblog'
         data = {
             'visibility': 'public'
         }

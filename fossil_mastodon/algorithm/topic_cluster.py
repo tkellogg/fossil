@@ -27,7 +27,9 @@ class TopicCluster(base.BaseAlgorithm):
         self.labels = labels
 
     def render(self, toots: list[core.Toot], context: base.RenderContext) -> ClusterRenderer:
+        before = len(toots)
         toots = [toot for toot in toots if toot.embedding is not None]
+        print("Removed", before - len(toots), "toots with no embedding (probably image-only).", f"{len(toots)} toots remaining.")
         cluster_indices = self.kmeans.predict(np.array([toot.embedding for toot in toots]))
         for toot, cluster_index in zip(toots, cluster_indices):
             toot.cluster = self.labels[cluster_index]
