@@ -203,4 +203,19 @@ async def toots_boost(id: int):
             print("ERROR:", response.json())
             raise
     raise HTTPException(status_code=404, detail="Toot not found")
+
+@app.post("/toots/{id}/favorite")
+async def toots_favorite(id: int):
+    toot = core.Toot.get_by_id(id)
+    if toot is not None:
+        from fossil_mastodon.config import MASTO_BASE, headers
+        url = f'{MASTO_BASE}/api/v1/statuses/{toot.toot_id}/favourite'
+        response = requests.post(url, headers=headers())
+        try:
+            response.raise_for_status()
+            return responses.HTMLResponse("<div>💫</div>")
+        except:
+            print("ERROR:", response.json())
+            raise
+    raise HTTPException(status_code=404, detail="Toot not found")
     
