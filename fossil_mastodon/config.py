@@ -3,6 +3,7 @@ import functools
 import pathlib
 import shutil
 import tempfile
+import llm
 
 import pydantic
 
@@ -41,6 +42,12 @@ OPENAI_API_BASE = get_config().get("OPENAI_API_BASE", "https://api.openai.com/v1
 MASTO_BASE = get_config().get("MASTO_BASE", "https://hachyderm.io")
 EMBEDDING_MODEL = ALL_MODELS[get_config().get("EMBEDDING_MODEL", "ada-002")]
 SUMMARIZE_MODEL = ALL_MODELS[get_config().get("SUMMARIZE_MODEL", "gpt-3.5-turbo")]
+
+def get_installed_llms() -> set[str]:
+    return {m.model.model_id for m in llm.get_models_with_aliases()}
+
+def get_installed_embedding_models() -> set[str]:
+    return {m.model.model_id for m in llm.get_embedding_models_with_aliases()}
 
 
 # Static files

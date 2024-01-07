@@ -6,11 +6,16 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <link rel="stylesheet" href="/static/style.css">
     <script src="https://unpkg.com/htmx.org@1.9.10" integrity="sha384-D1Kt99CQMDuVetoL1lrYwg5t+9QdHe7NLX/SoJYkXDFfX37iInKRy5xLSi8nO7UC" crossorigin="anonymous"></script>
+    <script src="https://unpkg.com/htmx.org/dist/ext/json-enc.js"></script>
     <script src="/static/page.js"></script>
 </head>
 <body>
-    <h1>Fossil</h1>
-    
+    <h1><button onclick="htmx.toggleClass(htmx.find('#hamburger'), 'open')">🍔</button> Fossil</h1>
+    <div id="hamburger" class="hamburger">
+        <a href="/">Home</a>
+        <a href="/settings">Settings</a>
+        <a href="/about">About</a>
+    </div>
     <div>
         {% block content %}
         <!-- Specialized content goes here -->

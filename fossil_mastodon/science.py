@@ -1,3 +1,4 @@
+import llm
 import numpy as np
 import openai
 from . import core, config
@@ -22,12 +23,8 @@ def assign_clusters(toots: list[core.Toot], n_clusters: int = 5):
 
         # Use GPT-3.5-turbo to summarize the combined text
         prompt = f"Create a single label that describes all of these related tweets, make it succinct but descriptive. The label should describe all {len(clustered_toots)} of these\n\n{combined_text}"
-        response = client.chat.completions.create(
-            model=config.SUMMARIZE_MODEL.name,
-            messages=[{"role": "user", "content": reduce_size(prompt)}],
-            max_tokens=100,
-        )
-        summary = response.choices[0].message.content.strip()
+        model = llm.get_model(config.SUMMARIZE_MODEL.name)
+        summary = model.prompt(prompt).text()
 
         # Do something with the summary
         for toot, cluster_label in zip(toots, cluster_labels):

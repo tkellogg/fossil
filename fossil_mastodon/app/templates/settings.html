@@ -1,0 +1,51 @@
+{% extends "base/page.html" %}
+
+{% block content %}
+<section>
+    <h2><a href="/" class="back-button">⬅</a>Settings</h2>
+
+    <form id="settings-form" hx-ext="json-enc" hx-swap="innerHTML">
+        <label for="embedding_model">Embedding model</label>
+        <div class="row">
+            <select name="embedding_model" id="embedding_model" hx-trigger="change" hx-target="#embedding_model_status" hx-post="/settings">
+                <option value="" {% if embedding_model == "" %}selected{% endif %}>None</option>
+                {% for model in embedding_models %}
+                    <option value="{{ model }}" 
+                            {% if model == embedding_model %}selected{% endif %}>
+                        {{ model }}
+                    </option>
+                {% endfor %}
+            </select>
+            <div class="status-target" id="embedding_model_status"></div>
+        </div>
+
+        <label for="embedding_model">Embedding model</label>
+        <div class="row">
+            <select name="summarize_model" id="summarize_model" hx-trigger="change" hx-target="#summarize_model_status" hx-post="/settings">
+                <option value="" {% if summarize_model == "" %}selected{% endif %}>None</option>
+                {% for model in summarize_models %}
+                    <option value="{{ model }}" 
+                            {% if model == summarize_model %}selected{% endif %}>
+                        {{ model }}
+                    </option>
+                {% endfor %}
+            </select>
+            <div class="status-target" id="summarize_model_status"></div>
+        </div>
+    </form>
+
+    <form hx-swap="innerHTML">
+        <fieldset>
+            <legend>Keys</legend>
+            {% for key in keys %}
+                <div class="row">
+                    <div class="key">{{ key }}</div>
+                    <input type="password" name="{{ key }}" value="{{ keys[key] }}" />
+                    <div class="status-target" id="summarize_model_status"></div>
+                </div>
+            {% endfor %}
+            <button type="submit" hx-post="/keys">Save</button>
+        </fieldset>
+    </form>
+</section>
+{% endblock %}

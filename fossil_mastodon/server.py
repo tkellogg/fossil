@@ -9,6 +9,7 @@ import importlib
 import json
 from typing import Annotated
 from fastapi import FastAPI, Form, responses, staticfiles, templating, Request, HTTPException
+import llm
 import requests
 
 
@@ -146,6 +147,35 @@ async def algorithm_form(name: str, request: Request):
         session=session,
     )
     return algo_type.render_model_params(ctx)
+
+
+@app.get("/settings")
+async def get_settings(request: Request):
+    session: core.Session = request.state.session
+    keys = {"openai": "", **llm.load_keys()}
+    return templates.TemplateResponse("settings.html", {
+        "request": request,
+        "settings": session.settings,
+        "embedding_models": config.get_installed_embedding_models(),
+        "embedding_model": session.settings.embedding_model,
+        "summarize_models": config.get_installed_llms(),
+        "summarize_model": session.settings.summarize_model,
+        "keys": keys,
+    })
+
+@app.post("/settings")
+async def post_settings(settings: core.Settings, request: Request):
+    session: core.Session = request.state.session
+    session.settings = settings
+    session.save()
+    return responses.HTMLResponse("<div>👍</div>")
+
+@app.post("/keys")
+async def post_keys(request: Request):
+    body_params: dict[str, str] = dict((await request.form()))
+    key_path = llm.user_dir() / "keys.json"
+    key_path.write_text(json.dumps(body_params))
+    return responses.HTMLResponse("<div>👍</div>")
 
 
 @app.post("/toots/{id}/debug")

@@ -5,7 +5,7 @@ function update_deps() {
 }
 
 function run() {
-    poetry run uvicorn --host 0.0.0.0 --port 8888 --reload fossil_mastdon.server:app
+    poetry run uvicorn --host 0.0.0.0 --port 8888 --reload --reload-include '*.html' --reload-include '*.css' fossil_mastdon.server:app
 }
 
 

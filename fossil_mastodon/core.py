@@ -337,7 +337,19 @@ def _create_session_table():
             )
         ''')
 
+        try:
+            c.execute('''
+                ALTER TABLE sessions ADD COLUMN settings TEXT
+            ''')
+        except sqlite3.OperationalError:
+            pass
+
         conn.commit()
+
+
+class Settings(BaseModel):
+    embedding_model: str | None = None
+    summarize_model: str | None = None
 
 
 class Session(BaseModel):
@@ -345,6 +357,7 @@ class Session(BaseModel):
     algorithm_spec: str | None = None
     algorithm: bytes | None = None
     ui_settings: str | None = None
+    settings: Settings
 
     def set_ui_settings(self, ui_settings: dict[str, str]):
         self.ui_settings = json.dumps(ui_settings)
@@ -380,7 +393,7 @@ class Session(BaseModel):
             c = conn.cursor()
 
             c.execute('''
-                SELECT id, algorithm_spec, algorithm, ui_settings FROM sessions WHERE id = ?
+                SELECT id, algorithm_spec, algorithm, ui_settings, settings FROM sessions WHERE id = ?
             ''', (id,))
 
             row = c.fetchone()
@@ -390,6 +403,7 @@ class Session(BaseModel):
                     algorithm_spec=row[1],
                     algorithm=row[2],
                     ui_settings=row[3],
+                    settings=Settings(**json.loads(row[4] or "{}")),
                 )
                 return session
             return None
@@ -397,7 +411,7 @@ class Session(BaseModel):
     @classmethod
     def create(cls) -> "Session":
         import uuid
-        return cls(id=str(uuid.uuid4()).replace("-", ""))
+        return cls(id=str(uuid.uuid4()).replace("-", ""), settings=Settings())
 
     def save(self, init_conn: sqlite3.Connection | None = None) -> bool:
         _create_session_table()
@@ -410,13 +424,14 @@ class Session(BaseModel):
             c = conn.cursor()
 
             c.execute('''
-                INSERT INTO sessions (id, algorithm_spec, algorithm, ui_settings)
-                VALUES (?, ?, ?, ?)
+                INSERT INTO sessions (id, algorithm_spec, algorithm, ui_settings, settings)
+                VALUES (?, ?, ?, ?, ?)
                 ON CONFLICT(id) DO UPDATE 
                     SET algorithm_spec = excluded.algorithm_spec
                       , algorithm = excluded.algorithm
                       , ui_settings = excluded.ui_settings
-            ''', (self.id, self.algorithm_spec, self.algorithm, self.ui_settings))
+                      , settings = excluded.settings
+            ''', (self.id, self.algorithm_spec, self.algorithm, self.ui_settings, self.settings.model_dump_json()))
 
             if init_conn is None:
                 conn.commit()
