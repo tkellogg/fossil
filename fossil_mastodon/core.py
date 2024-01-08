@@ -289,9 +289,11 @@ def download_timeline(since: datetime.datetime):
             break
     logger.info(f"done with toots; earliest={earliest_date.isoformat() if earliest_date else None}, last_date: {last_date.isoformat() if last_date else None}")
 
-    # Set embeddings in batches of 100
     page_size = 50
-    num_pages = len(buffer) // page_size
+    if len(buffer) > 0:
+        num_pages = len(buffer) // page_size + 1
+    else:
+        num_pages = 0
     for page in range(num_pages):
         start_index = page * page_size
         end_index = start_index + page_size
