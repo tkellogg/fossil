@@ -17,7 +17,7 @@ def get_toots(_cache_key: int, timeline_since, n_clusters) -> list[core.Toot]:
     toots = core.Toot.get_toots_since(datetime.datetime.utcnow() - timeline_since)
     if len(toots) > 0:
         ui.all_toot_summary(toots)
-        science.assign_clusters(toots, n_clusters=n_clusters)
+        science.assign_clusters(st.session_state['id'], toots, n_clusters=n_clusters)
     return toots
 
 # Refresh button
@@ -27,7 +27,7 @@ if latest_date is None:
     if is_refreshing:
         with st.spinner("Downloading toots..."):
             core.create_database()
-            core.download_timeline(datetime.datetime.utcnow() - datetime.timedelta(days=1))
+            core.download_timeline(datetime.datetime.utcnow() - datetime.timedelta(days=1), st.session_state['id'])
             latest_date = core.Toot.get_latest_date()
         st.session_state.cache_key = random.randint(0, 10000)
 else:
@@ -35,7 +35,7 @@ else:
     if is_refreshing:
         with st.spinner("Downloading toots..."):
             core.create_database()
-            core.download_timeline(latest_date)
+            core.download_timeline(latest_date,  st.session_state['id'])
         st.session_state.cache_key = random.randint(0, 10000)
 
 # customize timeline segment to analyze

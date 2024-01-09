@@ -8,13 +8,12 @@ import datetime
 import importlib
 import json
 from typing import Annotated
-from fastapi import FastAPI, Form, responses, staticfiles, templating, Request, HTTPException
+
 import llm
 import requests
+from fastapi import FastAPI, Form, HTTPException, Request, responses, staticfiles, templating
 
-
-from fossil_mastodon import config, core, ui, algorithm
-
+from fossil_mastodon import algorithm, config, core, ui
 
 app = FastAPI()
 
@@ -70,8 +69,8 @@ async def toots():
 @app.post("/toots/download")
 async def toots_download(request: Request):
     core.create_database()
-    core.download_timeline(datetime.datetime.utcnow() - datetime.timedelta(days=1))
     session: core.Session = request.state.session
+    core.download_timeline(datetime.datetime.utcnow() - datetime.timedelta(days=1), session.id)
     algorithm_spec = json.loads(session.algorithm_spec) if session.algorithm_spec else {}
     body_params: dict[str, str] = dict((await request.form()))
     session.set_ui_settings(body_params)
@@ -82,6 +81,7 @@ async def toots_download(request: Request):
             algorithm.TrainContext(
                 end_time=datetime.datetime.utcnow(),
                 timedelta=datetime.timedelta(days=1),
+                session_id=session.id
             ),
             algorithm_spec["kwargs"],
         )
@@ -107,6 +107,7 @@ async def toots_train(
     context = algorithm.TrainContext(
         end_time=datetime.datetime.utcnow(),
         timedelta=ui.timedelta(time_span),
+        session_id=request.state.session.id
     )
 
     algo_kwargs = {k: v for k, v in dict((await request.form())).items() 
@@ -190,12 +191,11 @@ async def toots_debug(id: int):
 async def toots_boost(id: int):
     toot = core.Toot.get_by_id(id)
     if toot is not None:
-        from fossil_mastodon.config import MASTO_BASE, headers
-        url = f'{MASTO_BASE}/api/v1/statuses/{toot.toot_id}/reblog'
+        url = f'{config.ConfigHandler.MASTO_BASE}/api/v1/statuses/{toot.toot_id}/reblog'
         data = {
             'visibility': 'public'
         }
-        response = requests.post(url, json=data, headers=headers())
+        response = requests.post(url, json=data, headers=config.headers())
         try:
             response.raise_for_status()
             return responses.HTMLResponse("<div>🚀</div>")
@@ -208,9 +208,8 @@ async def toots_boost(id: int):
 async def toots_favorite(id: int):
     toot = core.Toot.get_by_id(id)
     if toot is not None:
-        from fossil_mastodon.config import MASTO_BASE, headers
-        url = f'{MASTO_BASE}/api/v1/statuses/{toot.toot_id}/favourite'
-        response = requests.post(url, headers=headers())
+        url = f'{config.ConfigHandler.MASTO_BASE}/api/v1/statuses/{toot.toot_id}/favourite'
+        response = requests.post(url, headers=config.headers())
         try:
             response.raise_for_status()
             return responses.HTMLResponse("<div>💫</div>")

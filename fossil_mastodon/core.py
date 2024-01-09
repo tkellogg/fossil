@@ -4,18 +4,21 @@ import importlib
 import json
 import logging
 import sqlite3
-from typing import Optional, Type
 import typing
+from typing import Optional, Type
+
 import html2text
 import llm
 import numpy as np
-
 import requests
 
 from fossil_mastodon import config
+
 if typing.TYPE_CHECKING:
     from fossil_mastodon.algorithm import base
+
 import os
+
 from pydantic import BaseModel
 
 logger = logging.getLogger(__name__)
@@ -23,11 +26,11 @@ logger = logging.getLogger(__name__)
 
 @functools.cache
 def create_database():
-    if os.path.exists(config.DATABASE_PATH):
+    if os.path.exists(config.ConfigHandler.DATABASE_PATH):
         return
 
     print("Creating database")
-    with sqlite3.connect(config.DATABASE_PATH) as conn:
+    with sqlite3.connect(config.ConfigHandler.DATABASE_PATH) as conn:
         c = conn.cursor()
 
         # Create the toots table if it doesn't exist
@@ -118,7 +121,7 @@ class Toot(BaseModel):
     def save(self, init_conn: sqlite3.Connection | None = None) -> bool:
         try:
             if init_conn is None:
-                conn = sqlite3.connect(config.DATABASE_PATH)
+                conn = sqlite3.connect(config.ConfigHandler.DATABASE_PATH)
             else:
                 conn = init_conn
             create_database()
@@ -157,7 +160,7 @@ class Toot(BaseModel):
     @classmethod
     def get_toots_since(cls, since: datetime.datetime) -> list["Toot"]:
         create_database()
-        with sqlite3.connect(config.DATABASE_PATH) as conn:
+        with sqlite3.connect(config.ConfigHandler.DATABASE_PATH) as conn:
             c = conn.cursor()
 
             c.execute('''
@@ -186,7 +189,7 @@ class Toot(BaseModel):
     @classmethod
     def get_by_id(cls, id: int) -> Optional["Toot"]:
         create_database()
-        with sqlite3.connect(config.DATABASE_PATH) as conn:
+        with sqlite3.connect(config.ConfigHandler.DATABASE_PATH) as conn:
             c = conn.cursor()
 
             c.execute('''
@@ -213,7 +216,7 @@ class Toot(BaseModel):
     @staticmethod
     def get_latest_date() -> datetime.datetime | None:
         create_database()
-        with sqlite3.connect(config.DATABASE_PATH) as conn:
+        with sqlite3.connect(config.ConfigHandler.DATABASE_PATH) as conn:
             c = conn.cursor()
 
             c.execute('''
@@ -252,21 +255,21 @@ class Toot(BaseModel):
         print("boost", self.url)
 
 
-def get_toots_since(since: datetime.datetime):
+def get_toots_since(since: datetime.datetime, session_id: str):
     assert isinstance(since, datetime.datetime), type(since)
     create_database()
-    download_timeline(since)
+    download_timeline(since, session_id)
     return Toot.get_toots_since(since)
 
 
-def download_timeline(since: datetime.datetime):
+def download_timeline(since: datetime.datetime, session_id: str):
     last_date = Toot.get_latest_date()
     logger.info(f"last toot date: {last_date}")
     last_date = last_date or since
     earliest_date = None
     buffer: list[Toot] = []
     last_id = ""
-    curr_url = f"{config.MASTO_BASE}/api/v1/timelines/home?limit=40"
+    curr_url = f"{config.ConfigHandler.MASTO_BASE}/api/v1/timelines/home?limit=40"
     import json as JSON
     while not earliest_date or earliest_date > last_date:
         response = requests.get(curr_url, headers=config.headers())
@@ -300,18 +303,18 @@ def download_timeline(since: datetime.datetime):
         page_toots = buffer[start_index:end_index]
 
         # Example: Call the _create_embeddings function
-        _create_embeddings(page_toots)
-        with sqlite3.connect(config.DATABASE_PATH) as conn:
+        _create_embeddings(page_toots, session_id)
+        with sqlite3.connect(config.ConfigHandler.DATABASE_PATH) as conn:
             for toot in page_toots:
                 toot.save(init_conn=conn)
 
 
-def _create_embeddings(toots: list[Toot]):
+def _create_embeddings(toots: list[Toot], session_id: str):
     # Convert the list of toots to a single string
     toots = [t for t in toots if t.content]
 
     # Call the llm embedding API to create embeddings
-    emb_model = llm.get_embedding_model(config.EMBEDDING_MODEL.name)
+    emb_model = llm.get_embedding_model(config.ConfigHandler.EMBEDDING_MODEL(session_id).name)
     embeddings = list(emb_model.embed_batch([html2text.html2text(t.content) for t in toots]))
 
     # Extract the embeddings from the API response
@@ -326,7 +329,7 @@ def _create_embeddings(toots: list[Toot]):
 @functools.lru_cache()
 def _create_session_table():
     create_database()
-    with sqlite3.connect(config.DATABASE_PATH) as conn:
+    with sqlite3.connect(config.ConfigHandler.DATABASE_PATH) as conn:
         c = conn.cursor()
 
         # Create the toots table if it doesn't exist
@@ -391,7 +394,7 @@ class Session(BaseModel):
     def get_by_id(cls, id: str) -> Optional["Session"]:
         create_database()
         _create_session_table()
-        with sqlite3.connect(config.DATABASE_PATH) as conn:
+        with sqlite3.connect(config.ConfigHandler.DATABASE_PATH) as conn:
             c = conn.cursor()
 
             c.execute('''
@@ -419,7 +422,7 @@ class Session(BaseModel):
         _create_session_table()
         try:
             if init_conn is None:
-                conn = sqlite3.connect(config.DATABASE_PATH)
+                conn = sqlite3.connect(config.ConfigHandler.DATABASE_PATH)
             else:
                 conn = init_conn
             create_database()

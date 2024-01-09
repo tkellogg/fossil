@@ -6,9 +6,9 @@ import sqlite3
 import traceback
 import typing
 
-from fastapi import templating, Response, responses, Request
 import pkg_resources
 import pydantic
+from fastapi import Request, Response, responses, templating
 
 from fossil_mastodon import config, core, ui
 
@@ -51,12 +51,13 @@ class TrainContext(pydantic.BaseModel):
     """
     end_time: datetime.datetime
     timedelta: datetime.timedelta
+    session_id: str
 
     def get_toots(self) -> list[core.Toot]:
         return core.Toot.get_toots_since(self.end_time - self.timedelta)
 
     def sqlite_connection(self) -> sqlite3.Connection:
-        return sqlite3.connect(config.DATABASE_PATH)
+        return sqlite3.connect(config.ConfigHandler.DATABASE_PATH)
 
 
 class BaseAlgorithm(abc.ABC):
