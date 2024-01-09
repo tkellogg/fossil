@@ -1,9 +1,11 @@
-from fastapi import Response, responses
 import llm
 import numpy as np
 import pydantic
-from sklearn.cluster import KMeans
 import tiktoken
+from fastapi import Response, responses
+from sklearn.cluster import KMeans
+from tqdm import trange
+
 from fossil_mastodon import config, core, ui
 from fossil_mastodon.algorithm import base
 
@@ -60,14 +62,14 @@ class TopicCluster(base.BaseAlgorithm):
         cluster_labels = kmeans.fit_predict(embeddings)
 
         labels: dict[int, str] = {}
-        model = llm.get_model(config.SUMMARIZE_MODEL.name)
-        for i_clusters in range(n_clusters):
+        model = llm.get_model(config.ConfigHandler.SUMMARIZE_MODEL(context.session_id).name)
+        for i_clusters in trange(n_clusters):
             clustered_toots = [toot for toot, cluster_label in zip(toots, cluster_labels) if cluster_label == i_clusters]
             combined_text = "\n\n".join([toot.content for toot in clustered_toots])
 
-            # Use GPT-3.5-turbo to summarize the combined text
+            # Use the summarizing model to summarize the combined text
             prompt = f"Create a single label that describes all of these related tweets, make it succinct but descriptive. The label should describe all {len(clustered_toots)} of these\n\n{combined_text}"
-            summary = model.prompt(reduce_size(prompt)).text().strip()
+            summary = model.prompt(reduce_size(context.session_id, prompt)).text().strip()
             labels[i_clusters] = summary
 
         return cls(kmeans=kmeans, labels=labels)
@@ -82,12 +84,18 @@ class TopicCluster(base.BaseAlgorithm):
             </div>
         """)
 
+def get_encoding(session_id: str):
+    try:
+        return tiktoken.encoding_for_model(config.ConfigHandler.SUMMARIZE_MODEL(session_id).name)
+    except KeyError:
+        encoding_name = tiktoken.list_encoding_names()[-1]
+        return tiktoken.get_encoding(encoding_name)
 
-ENCODING = tiktoken.encoding_for_model(config.SUMMARIZE_MODEL.name)
-
-def reduce_size(text: str, model_limit: int = config.SUMMARIZE_MODEL.context_length, est_output_size: int = 500) -> str:
-    tokens = ENCODING.encode(text)
-    return ENCODING.decode(tokens[:model_limit - est_output_size])
+def reduce_size(session_id: str, text: str, model_limit: int = -1, est_output_size: int = 500) -> str:
+    if model_limit < 0:
+        config.ConfigHandler.SUMMARIZE_MODEL(session_id).context_length
+    tokens = get_encoding(session_id).encode(text)
+    return get_encoding(session_id).decode(tokens[:model_limit - est_output_size])
 
 
 class NoopKMeans(KMeans):

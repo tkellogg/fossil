@@ -5,7 +5,8 @@ import urllib.parse
 import pydantic
 import streamlit as st
 
-from . import core, config
+from . import config, core
+
 
 def get_time_frame() -> datetime.timedelta:
     time_frame = st.radio("Show last:", ["6 hours", "day", "week"], horizontal=True)
@@ -55,7 +56,7 @@ def timedelta(time_span: str) -> datetime.timedelta:
 class LinkStyle:
     def __init__(self, scheme: str | None = None):
         # ivory://acct/openURL?url=
-        # {config.MASTO_BASE}/deck/@{toot.author}/{toot.toot_id}
+        # {config.ConfigHandler.MASTO_BASE}/deck/@{toot.author}/{toot.toot_id}
         if scheme:
             self.scheme = st.radio("Link scheme:", ["Desktop", "Ivory", "Original"], index=1, horizontal=True)
         else:
@@ -63,7 +64,7 @@ class LinkStyle:
 
     def toot_url(self, toot: core.Toot) -> str:
         if self.scheme == "Desktop":
-            return f"{config.MASTO_BASE}/@{toot.author}/{toot.toot_id}"
+            return f"{config.ConfigHandler.MASTO_BASE}/@{toot.author}/{toot.toot_id}"
         elif self.scheme == "Ivory":
             encoded_url = urllib.parse.quote(toot.url)
             return f"ivory://acct/openURL?url={encoded_url}"
@@ -73,7 +74,7 @@ class LinkStyle:
 
     def profile_url(self, toot: core.Toot) -> str:
         if self.scheme == "Desktop":
-            return f"{config.MASTO_BASE}/@{toot.author}"
+            return f"{config.ConfigHandler.MASTO_BASE}/@{toot.author}"
         elif self.scheme == "Ivory":
             # return f"ivory://@{toot.author}/profile"
             return f"ivory://acct/openURL?url={toot.profile_url}"
