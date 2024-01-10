@@ -6,13 +6,13 @@ from fastapi import Response, responses
 from sklearn.cluster import KMeans
 from tqdm import trange
 
-from fossil_mastodon import config, core, ui
+from fossil_mastodon import config, core, plugins, ui
 from fossil_mastodon.algorithm import base
 
 
 class ClusterRenderer(base.Renderable, pydantic.BaseModel):
     clusters: list[ui.TootCluster]
-    context: base.RenderContext
+    context: plugins.RenderContext
 
     def render(self, **response_args) -> Response:
         toot_clusters = ui.TootClusters(clusters=self.clusters)
@@ -28,7 +28,7 @@ class TopicCluster(base.BaseAlgorithm):
         self.kmeans = kmeans
         self.labels = labels
 
-    def render(self, toots: list[core.Toot], context: base.RenderContext) -> ClusterRenderer:
+    def render(self, toots: list[core.Toot], context: plugins.RenderContext) -> ClusterRenderer:
         before = len(toots)
         toots = [toot for toot in toots if toot.embedding is not None]
         print("Removed", before - len(toots), "toots with no embedding (probably image-only).", f"{len(toots)} toots remaining.")
@@ -75,7 +75,7 @@ class TopicCluster(base.BaseAlgorithm):
         return cls(kmeans=kmeans, labels=labels)
 
     @staticmethod
-    def render_model_params(context: base.RenderContext) -> Response:
+    def render_model_params(context: plugins.RenderContext) -> Response:
         default = context.session.get_ui_settings().get("num_clusters", "15")
         return responses.HTMLResponse(f"""
             <div class="slider">

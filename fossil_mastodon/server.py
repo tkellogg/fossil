@@ -13,7 +13,8 @@ import llm
 import requests
 from fastapi import FastAPI, Form, HTTPException, Request, responses, staticfiles, templating
 
-from fossil_mastodon import algorithm, config, core, ui
+from fossil_mastodon import algorithm, config, core, plugins, ui
+
 
 app = FastAPI()
 
@@ -42,7 +43,7 @@ async def session_middleware(request: Request, call_next):
 @app.get("/")
 async def root(request: Request):
     session: core.Session = request.state.session
-    ctx = algorithm.RenderContext(
+    ctx = plugins.RenderContext(
         templates=templates,
         request=request,
         link_style=ui.LinkStyle("Desktop"),
@@ -87,7 +88,7 @@ async def toots_download(request: Request):
         )
         timespan = ui.timedelta(body_params["time_span"])
         timeline = core.Toot.get_toots_since(datetime.datetime.utcnow() - timespan)
-        renderable = model.render(timeline, algorithm.RenderContext(
+        renderable = model.render(timeline, plugins.RenderContext(
             templates=templates,
             request=request,
             link_style=ui.LinkStyle(body_params["link_style"] if "link_style" in body_params else "Desktop"),
@@ -128,7 +129,7 @@ async def toots_train(
 
     # render
     timeline = core.Toot.get_toots_since(datetime.datetime.utcnow() - ui.timedelta(time_span))
-    renderable = model.render(timeline, algorithm.RenderContext(
+    renderable = model.render(timeline, plugins.RenderContext(
         templates=templates,
         request=request,
         link_style=ui.LinkStyle(link_style),
@@ -141,7 +142,7 @@ async def toots_train(
 async def algorithm_form(name: str, request: Request):
     session: core.Session = request.state.session
     algo_type = session.get_algorithm_type() or algorithm.get_algorithms()[0]
-    ctx = algorithm.RenderContext(
+    ctx = plugins.RenderContext(
         templates=templates,
         request=request,
         link_style=ui.LinkStyle(session.get_ui_settings().get("link_style", "Desktop")),

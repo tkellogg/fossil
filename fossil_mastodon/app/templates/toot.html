@@ -22,5 +22,6 @@
         <button hx-post="/toots/{{ toot.id }}/favorite">⭐️</button>
         <button hx-post="/toots/{{ toot.id }}/boost">️🔁</button>
         <button hx-post="/toots/{{ toot.id }}/debug">🪲</button>
+        {{ ctx.render_toot_display_plugins(toot) }}
     </div>
 </div>

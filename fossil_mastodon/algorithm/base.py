@@ -10,25 +10,7 @@ import pkg_resources
 import pydantic
 from fastapi import Request, Response, responses, templating
 
-from fossil_mastodon import config, core, ui
-
-
-class RenderContext(pydantic.BaseModel):
-    """
-    A context object for rendering a template.
-    """
-    class Config:
-        arbitrary_types_allowed = True
-    templates: templating.Jinja2Templates
-    request: Request
-    link_style: ui.LinkStyle
-    session: core.Session
-
-    def template_args(self) -> dict:
-        return {
-            "request": self.request,
-            "link_style": self.link_style,
-        }
+from fossil_mastodon import config, core, plugins, ui
 
 
 class Renderable(abc.ABC):
@@ -89,7 +71,7 @@ class BaseAlgorithm(abc.ABC):
         return cls.get_name()
 
     @abc.abstractmethod
-    def render(self, toots: list[core.Toot], context: RenderContext) -> Renderable:
+    def render(self, toots: list[core.Toot], context: plugins.RenderContext) -> Renderable:
         """
         Run the model and return a Renderable object. This object is typically
         deserialized before this method is called.
@@ -113,7 +95,7 @@ class BaseAlgorithm(abc.ABC):
         raise NotImplementedError()
 
     @classmethod
-    def render_model_params(cls, context: RenderContext) -> Response:
+    def render_model_params(cls, context: plugins.RenderContext) -> Response:
         """
         Optionally, you can render HTML input elements that capture http_args passed 
         to train(). This is useful if your agorithm has hyperparameters that you want
