@@ -19,7 +19,7 @@
             <div class="status-target" id="embedding_model_status"></div>
         </div>
 
-        <label for="embedding_model">Embedding model</label>
+        <label for="summarize_model">Summarizing model</label>
         <div class="row">
             <select name="summarize_model" id="summarize_model" hx-trigger="change" hx-target="#summarize_model_status" hx-post="/settings">
                 <option value="" {% if summarize_model == "" %}selected{% endif %}>None</option>
