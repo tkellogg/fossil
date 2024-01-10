@@ -93,7 +93,7 @@ def get_encoding(session_id: str):
 
 def reduce_size(session_id: str, text: str, model_limit: int = -1, est_output_size: int = 500) -> str:
     if model_limit < 0:
-        config.ConfigHandler.SUMMARIZE_MODEL(session_id).context_length
+        model_limit = config.ConfigHandler.SUMMARIZE_MODEL(session_id).context_length
     tokens = get_encoding(session_id).encode(text)
     return get_encoding(session_id).decode(tokens[:model_limit - est_output_size])
 
