@@ -4,6 +4,7 @@ import importlib
 import json
 import logging
 import sqlite3
+import traceback
 import typing
 from typing import Optional, Type
 
@@ -372,11 +373,15 @@ class Session(BaseModel):
         return json.loads(self.ui_settings or "{}")
 
     def get_algorithm_type(self) -> Type["base.BaseAlgorithm"] | None:
-        spec = json.loads(self.algorithm_spec) if self.algorithm_spec else {}
-        if "module" in spec and "class_name" in spec:
-            mod = importlib.import_module(spec["module"])
-            return getattr(mod, spec["class_name"])
-        return None
+        try:
+            spec = json.loads(self.algorithm_spec) if self.algorithm_spec else {}
+            if "module" in spec and "class_name" in spec:
+                mod = importlib.import_module(spec["module"])
+                return getattr(mod, spec["class_name"])
+            return None
+        except ModuleNotFoundError:
+            traceback.print_exc()
+            return None
 
     def set_algorithm_by_name(self, name: str) -> Type["base.BaseAlgorithm"] | None:
         from fossil_mastodon.algorithm import base

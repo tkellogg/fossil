@@ -7,10 +7,10 @@ from sklearn.cluster import KMeans
 from tqdm import trange
 
 from fossil_mastodon import config, core, plugins, ui
-from fossil_mastodon.algorithm import base
+from fossil_mastodon import algorithm
 
 
-class ClusterRenderer(base.Renderable, pydantic.BaseModel):
+class ClusterRenderer(algorithm.Renderable, pydantic.BaseModel):
     clusters: list[ui.TootCluster]
     context: plugins.RenderContext
 
@@ -23,7 +23,7 @@ class ClusterRenderer(base.Renderable, pydantic.BaseModel):
         **response_args)
 
 
-class TopicCluster(base.BaseAlgorithm):
+class TopicCluster(algorithm.BaseAlgorithm):
     def __init__(self, kmeans: KMeans, labels: dict[int, str]):
         self.kmeans = kmeans
         self.labels = labels
@@ -49,7 +49,7 @@ class TopicCluster(base.BaseAlgorithm):
         return ClusterRenderer(clusters=toot_clusters.clusters, context=context)
 
     @classmethod
-    def train(cls, context: base.TrainContext, args: dict[str, str]) -> "TopicCluster":
+    def train(cls, context: algorithm.TrainContext, args: dict[str, str]) -> "TopicCluster":
         toots = [toot for toot in context.get_toots() if toot.embedding is not None]
         print("lengths:", {len(toot.embedding) for toot in toots})
 

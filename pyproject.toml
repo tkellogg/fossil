@@ -23,7 +23,7 @@ llm = "^0.12"
 
 # You can use this same format for installing your own plugins from a different project
 [tool.poetry.plugins."fossil_mastodon.algorithms"]
-topic_cluster = "fossil_mastodon.algorithm.topic_cluster:TopicCluster"
+topic_cluster = "fossil_mastodon.plugin_impl.topic_cluster:TopicCluster"
 
 
 [tool.poetry.group.dev.dependencies]

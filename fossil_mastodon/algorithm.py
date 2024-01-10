@@ -8,9 +8,9 @@ import typing
 
 import pkg_resources
 import pydantic
-from fastapi import Request, Response, responses, templating
+from fastapi import Response, responses
 
-from fossil_mastodon import config, core, plugins, ui
+from fossil_mastodon import config, core, plugins
 
 
 class Renderable(abc.ABC):
@@ -42,7 +42,7 @@ class TrainContext(pydantic.BaseModel):
         return sqlite3.connect(config.ConfigHandler.DATABASE_PATH)
 
 
-class BaseAlgorithm(abc.ABC):
+class BaseAlgorithm(abc.ABC, plugins.PluginMetadata):
     """
     Base class for an algorithms that render your timeline. You should implemnet
     this class to create your own algorithm.
@@ -62,13 +62,6 @@ class BaseAlgorithm(abc.ABC):
     - serialize
     - deserialize
     """
-    @classmethod
-    def get_name(cls) -> str:
-        return cls.__name__
-
-    @classmethod
-    def get_display_name(cls) -> str:
-        return cls.get_name()
 
     @abc.abstractmethod
     def render(self, toots: list[core.Toot], context: plugins.RenderContext) -> Renderable:
@@ -114,7 +107,7 @@ class BaseAlgorithm(abc.ABC):
 @functools.lru_cache
 def get_algorithms() -> list[typing.Type[BaseAlgorithm]]:
     """
-    Load all algorithms from the fossil_mastodon.algorithm package.
+    Load all algorithm plugins from entry points.
     """
     algorithms = []
     for entry_point in pkg_resources.iter_entry_points("fossil_mastodon.algorithms"):

@@ -1,5 +1,6 @@
 import abc
 import functools
+import re
 import traceback
 from typing import Type
 
@@ -8,6 +9,30 @@ import pkg_resources
 import pydantic
 
 from fossil_mastodon import ui, core
+
+
+def title_case_to_spaced(string):
+    # The regex pattern looks for any lowercase letter followed by an uppercase letter
+    # and inserts a space between them
+    return re.sub(r'(?<=[a-z])(?=[A-Z])', ' ', string)
+
+
+class PluginMetadata:
+    """
+    Base class for a plugin's metadata. This information is used to display the plugin
+    on the settings page.
+    """
+    @classmethod
+    def get_name(cls) -> str:
+        return cls.__qualname__
+
+    @classmethod
+    def get_display_name(cls) -> str:
+        return title_case_to_spaced(cls.get_name())
+
+    @classmethod
+    def get_description(cls) -> str:
+        return cls.__doc__
 
 
 class RenderContext(pydantic.BaseModel):
@@ -35,7 +60,7 @@ class RenderContext(pydantic.BaseModel):
         )
 
 
-class BaseTootDisplayPlugin(abc.ABC):
+class BaseTootDisplayPlugin(abc.ABC, PluginMetadata):
     """
     Base class for a plugin that adds buttons to the toot display.
     """
@@ -75,7 +100,7 @@ def get_toot_display_plugins() -> list[BaseTootDisplayPlugin]:
     return plugins
 
 
-class BaseAPIOperationPlugin(abc.ABC):
+class BaseAPIOperationPlugin(abc.ABC, PluginMetadata):
     """
     Base class for a plugin that adds an API operation.
     """
