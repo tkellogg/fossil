@@ -10,6 +10,12 @@ from fossil_mastodon import config, core, plugins, ui
 from fossil_mastodon import algorithm
 
 
+plugin = plugins.Plugin(
+    name="Topic Cluster",
+    description="Cluster toots by topic",
+)
+
+
 class ClusterRenderer(algorithm.Renderable, pydantic.BaseModel):
     clusters: list[ui.TootCluster]
     context: plugins.RenderContext
@@ -23,6 +29,7 @@ class ClusterRenderer(algorithm.Renderable, pydantic.BaseModel):
         **response_args)
 
 
+@plugin.algorithm
 class TopicCluster(algorithm.BaseAlgorithm):
     def __init__(self, kmeans: KMeans, labels: dict[int, str]):
         self.kmeans = kmeans

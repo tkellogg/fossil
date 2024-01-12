@@ -6,7 +6,7 @@
     <button hx-post="/toots/download" hx-swap="innerHTML" hx-target="#toots" hx-include="#model-params" id="load_more_button" hx-indicator="#downloadspinner">Load More</button>
     <img src="/static/work-in-progress.gif" class="spinner" id="downloadspinner" /> 
 
-    <form hx-post="/toots/train" hx-target="#toots" hx-swap="innerHTML" id="model-params">
+    <form hx-post="/toots/train" hx-target="#toots" hx-swap="innerHTML" id="model-params" hx-indicator="#trainspinner">
 
       <div class="radio">
         <div>
@@ -63,11 +63,13 @@
           {% endautoescape %}
         </div>
 
-        <button type="submit" hx-indicator="#trainspinner">
-          Re-Train Algorithm
-        </button>
+        <div class="row">
+          <button type="submit">
+            Re-Train Algorithm
+          </button>
+          <img src="/static/work-in-progress.gif" class="spinner" id="trainspinner" /> 
+        </div>
       </div>
-      <img src="/static/work-in-progress.gif" class="spinner" id="trainspinner" /> 
 
     </form>
   </section>

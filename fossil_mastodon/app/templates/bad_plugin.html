@@ -1,0 +1,14 @@
+{% block content %}
+<section>
+<h2>Error in function signature!</h2>
+<ul>
+    <li>Plugin: {{ ex.plugin.name }}</li>
+    <li>Function: {{ ex.function_name }}</li>
+    <li>Signature: <code>{{ ex.signature }}</code></li>
+    <li>Expected signature: <code>{{ ex.expected_signature }}</code></li>
+</ul>
+<p>
+    This can happen for a variety of reasons. Check the logs for more information.
+</p>
+</section>
+{% endblock %}

@@ -1,16 +1,15 @@
 import abc
 import datetime
-import functools
 import pickle
 import sqlite3
-import traceback
 import typing
 
-import pkg_resources
 import pydantic
 from fastapi import Response, responses
 
-from fossil_mastodon import config, core, plugins
+from fossil_mastodon import config, core
+if typing.TYPE_CHECKING:
+    from fossil_mastodon import plugins
 
 
 class Renderable(abc.ABC):
@@ -42,7 +41,7 @@ class TrainContext(pydantic.BaseModel):
         return sqlite3.connect(config.ConfigHandler.DATABASE_PATH)
 
 
-class BaseAlgorithm(abc.ABC, plugins.PluginMetadata):
+class BaseAlgorithm(abc.ABC):
     """
     Base class for an algorithms that render your timeline. You should implemnet
     this class to create your own algorithm.
@@ -64,7 +63,7 @@ class BaseAlgorithm(abc.ABC, plugins.PluginMetadata):
     """
 
     @abc.abstractmethod
-    def render(self, toots: list[core.Toot], context: plugins.RenderContext) -> Renderable:
+    def render(self, toots: list[core.Toot], context: "plugins.RenderContext") -> Renderable:
         """
         Run the model and return a Renderable object. This object is typically
         deserialized before this method is called.
@@ -88,7 +87,7 @@ class BaseAlgorithm(abc.ABC, plugins.PluginMetadata):
         raise NotImplementedError()
 
     @classmethod
-    def render_model_params(cls, context: plugins.RenderContext) -> Response:
+    def render_model_params(cls, context: "plugins.RenderContext") -> Response:
         """
         Optionally, you can render HTML input elements that capture http_args passed 
         to train(). This is useful if your agorithm has hyperparameters that you want
@@ -102,22 +101,3 @@ class BaseAlgorithm(abc.ABC, plugins.PluginMetadata):
     @staticmethod
     def deserialize(data: bytes) -> "BaseAlgorithm":
         return pickle.loads(data)
-
-
-@functools.lru_cache
-def get_algorithms() -> list[typing.Type[BaseAlgorithm]]:
-    """
-    Load all algorithm plugins from entry points.
-    """
-    algorithms = []
-    for entry_point in pkg_resources.iter_entry_points("fossil_mastodon.algorithms"):
-        try:
-            algo = entry_point.load()
-            if issubclass(algo, BaseAlgorithm):
-                algorithms.append(algo)
-            else:
-                print(f"Error loading algorithm {entry_point.name}: not a subclass of BaseAlgorithm")
-        except:
-            print(f"Error loading algorithm {entry_point.name}")
-            traceback.print_exc()
-    return algorithms
