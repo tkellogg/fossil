@@ -35,7 +35,7 @@ class _ConfigHandler():
     }
     
     _model_lengths = defaultdict(
-        lambda: 10000, 
+        lambda: 2048, 
         {"gpt-3.5-turbo": 4097, "ada-002": 8191}
     )
     
