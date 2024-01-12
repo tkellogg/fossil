@@ -73,16 +73,36 @@ To get `MASTO_BASE` and `ACCESS_TOKEN`:
 8. Copy your access token into `ACCESS_TOKEN` in the `.env` file.
 9. Set `MAST_BASE`. You should be able to copy the URL from your browser and then remove the entire path (everything after `/`, inclusive).
 
+## Usage
+1. Ensure the settings are correct
+2. "Load More" to populate the database with toots
+3. "Re-Train Algorithm" to categorize and label those toots.
 
 # Configure Models
+Models can be configured and/or added via `llm`.
 
-Models can be configured via `llm`. For example, here's how to set your OpenAI API key, which gives you access to OpenAI models:
+## OpenAI
+Here's how to set your OpenAI API key, which gives you access to OpenAI models:
 
 ```
 $ llm keys set openai
 Enter key: ...
 ```
+## Local (Experimental)
+You will need to install an embedding model and a large language model. The instructions here use the `llm-sentence-transformers` and `llm-gpt4all` plugins to do so.
 
+```sh
+$ llm install llm-sentence-transformers # An Embedding Model Plugin
+$ llm install llm-gpt4all # A Large Language Model Plugin
+$ llm sentence-transformers register all-mpnet-base-v2 --alias mpnet # Download/Register one of the Embedding Models
+```
+
+### Notes
+- A full list of possible embedding models is composed of [the default list](https://www.sbert.net/docs/pretrained_models.html) and [these models from huggingface](https://huggingface.co/models?library=sentence-transformers).
+- The [llm-gpt4all](https://github.com/simonw/llm-gpt4all) README gives a list of models and their requirements
+- The first time you use a model, `llm` will need to download it. This will add to the overall time it takes to process 
+- The "Re-Train Algorithm" step will take a long time depending on your hardware; a progress bar is shown in the console window
+- The quality of the categorization and labels are not guaranteed
 
 ## Run the server
 
