@@ -1,6 +1,6 @@
 [tool.poetry]
 name = "fossil-mastodon"
-version = "0.2.0"
+version = "0.3.0-dev"
 description = "A mastodon reader client that uses embeddings to present a consolidated view of my mastodon timeline"
 authors = ["Tim Kellogg <timothy.kellogg@gmail.com>"]
 license = "MIT"
