@@ -1,11 +1,11 @@
 import atexit
-import functools
 import json
 import os
 import pathlib
+import random
 import shutil
 import sqlite3
-import tempfile
+import string
 from collections import defaultdict
 
 import llm
@@ -109,13 +109,20 @@ class StaticFiles(pydantic.BaseModel):
     base_path: pathlib.Path
     assets_path: pathlib.Path
     templates_path: pathlib.Path
-    temp_dir: tempfile.TemporaryDirectory
+
+    # HACK: Alright, I admit it, this is crazy. Here's the thing: we need to use shutil.rmtree in
+    # the destructor, but the destructor runs at a very weird time. I observed it running after
+    # the shutil module had been unloaded, so I was getting NullType for the module. Obvs the
+    # simple solution is this — make the function live longer than this object by capturing a reference.
+    rmtree = shutil.rmtree
 
     @classmethod
     def from_env(cls) -> "StaticFiles":
         src_path = pathlib.Path(__file__).parent / "app"
-        temp_dir = tempfile.TemporaryDirectory()
-        dst_path = pathlib.Path(temp_dir.name)
+        # I used to use tempfile, but MacOS deletes temp files every 3 days, so I needed to move
+        # to a more permanent location.
+        dst_path = pathlib.Path(os.path.expanduser(f"~/.cache/fossil-mastodon/{''.join(random.choices(string.ascii_lowercase, k=10))}"))
+        dst_path.mkdir(parents=True)
         shutil.copytree(src_path / "static", dst_path / "static")
         shutil.copytree(src_path / "templates", dst_path / "templates")
         
@@ -123,7 +130,6 @@ class StaticFiles(pydantic.BaseModel):
             base_path=dst_path,
             assets_path=dst_path / "static",
             templates_path=dst_path / "templates",
-            temp_dir=temp_dir,
         )
 
         atexit.register(obj.cleanup)
@@ -131,7 +137,7 @@ class StaticFiles(pydantic.BaseModel):
         return obj
 
     def cleanup(self):
-        self.temp_dir.cleanup()
+        self.rmtree(self.assets_path.parent)
 
     def __del__(self):
         self.cleanup()
