@@ -7,13 +7,13 @@ and inflexible. This gives us a lot more control.
 import datetime
 import importlib
 import json
-from typing import Annotated
+from typing import Annotated, Type
 
 import llm
 import requests
 from fastapi import FastAPI, Form, HTTPException, Request, responses, staticfiles, templating
 
-from fossil_mastodon import algorithm, config, core, plugins, ui
+from fossil_mastodon import algorithm, config, core, migrations, plugins, ui
 
 
 app = FastAPI()
@@ -27,10 +27,13 @@ templates.env.filters["rel_date"] = ui.time_ago
 
 @app.middleware("http")
 async def session_middleware(request: Request, call_next):
+    """
+    Called before each request. Sets up the session and saves it to the database.
+    """
     session_id = request.cookies.get("fossil_session_id")
     session = core.Session.get_by_id(session_id) if session_id else None
     if session is None:
-        session = core.Session.create()
+        session = core.Session.get_or_create()
         session.save()
         request.state.session = session
         response = await call_next(request)
@@ -51,6 +54,7 @@ async def root(request: Request):
         session=session,
     )
 
+    # GUARD: ensure some algorithms are installed
     algo_list = plugins.get_algorithms()
     if len(algo_list) == 0:
         print(f"No algorithms found (num plugins: {len(plugins.get_plugins())})")
@@ -60,6 +64,7 @@ async def root(request: Request):
             "request": request,
         })
 
+    # Render the UI
     algo = session.get_algorithm_type() or algo_list[0]
     return templates.TemplateResponse("index.html", {
         "request": request,
@@ -80,23 +85,22 @@ async def toots():
 
 @app.post("/toots/download")
 async def toots_download(request: Request):
-    core.create_database()
+    # init
+    migrations.create_database()
     session: core.Session = request.state.session
+    algorithm_spec: dict = json.loads(session.algorithm_spec) if session.algorithm_spec else {}
+
+    # download
     core.download_timeline(datetime.datetime.utcnow() - datetime.timedelta(days=1), session.id)
-    algorithm_spec = json.loads(session.algorithm_spec) if session.algorithm_spec else {}
+
+    # render
     body_params: dict[str, str] = dict((await request.form()))
     session.set_ui_settings(body_params)
     print("algorithm_spec", algorithm_spec)
     if "module" in algorithm_spec and "class_name" in algorithm_spec:
         mod = importlib.import_module(algorithm_spec["module"])
-        model: algorithm.BaseAlgorithm = getattr(mod, algorithm_spec["class_name"]).train(
-            algorithm.TrainContext(
-                end_time=datetime.datetime.utcnow(),
-                timedelta=datetime.timedelta(days=1),
-                session_id=session.id
-            ),
-            algorithm_spec["kwargs"],
-        )
+        model_class: Type[algorithm.BaseAlgorithm] = getattr(mod, algorithm_spec["class_name"])
+        model: algorithm.BaseAlgorithm = model_class.deserialize(session.algorithm)
         timespan = ui.timedelta(body_params["time_span"])
         timeline = core.Toot.get_toots_since(datetime.datetime.utcnow() - timespan)
         renderable = model.render(timeline, plugins.RenderContext(

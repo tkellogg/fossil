@@ -3,7 +3,9 @@ import functools
 import importlib
 import json
 import logging
+import random
 import sqlite3
+import string
 import traceback
 import typing
 from typing import Optional, Type
@@ -11,44 +13,16 @@ from typing import Optional, Type
 import html2text
 import llm
 import numpy as np
+from pydantic import BaseModel
 import requests
 
-from fossil_mastodon import config
+from fossil_mastodon import config, migrations
 
 if typing.TYPE_CHECKING:
-    from fossil_mastodon.algorithm import base
+    from fossil_mastodon import algorithm
 
-import os
-
-from pydantic import BaseModel
 
 logger = logging.getLogger(__name__)
-
-
-@functools.cache
-def create_database():
-    if os.path.exists(config.ConfigHandler.DATABASE_PATH):
-        return
-
-    print("Creating database")
-    with sqlite3.connect(config.ConfigHandler.DATABASE_PATH) as conn:
-        c = conn.cursor()
-
-        # Create the toots table if it doesn't exist
-        c.execute('''
-            CREATE TABLE IF NOT EXISTS toots (
-                id INTEGER PRIMARY KEY AUTOINCREMENT,
-                content TEXT,
-                author TEXT,
-                url TEXT,
-                created_at DATETIME,
-                embedding BLOB,
-                orig_json TEXT,
-                cluster TEXT  -- Added cluster column
-            )
-        ''')
-
-        conn.commit()
 
 
 @functools.lru_cache()
@@ -125,7 +99,7 @@ class Toot(BaseModel):
                 conn = sqlite3.connect(config.ConfigHandler.DATABASE_PATH)
             else:
                 conn = init_conn
-            create_database()
+            migrations.create_database()
             c = conn.cursor()
 
             # Check if the URL already exists
@@ -160,7 +134,7 @@ class Toot(BaseModel):
 
     @classmethod
     def get_toots_since(cls, since: datetime.datetime) -> list["Toot"]:
-        create_database()
+        migrations.create_database()
         with sqlite3.connect(config.ConfigHandler.DATABASE_PATH) as conn:
             c = conn.cursor()
 
@@ -189,7 +163,7 @@ class Toot(BaseModel):
 
     @classmethod
     def get_by_id(cls, id: int) -> Optional["Toot"]:
-        create_database()
+        migrations.create_database()
         with sqlite3.connect(config.ConfigHandler.DATABASE_PATH) as conn:
             c = conn.cursor()
 
@@ -216,7 +190,7 @@ class Toot(BaseModel):
 
     @staticmethod
     def get_latest_date() -> datetime.datetime | None:
-        create_database()
+        migrations.create_database()
         with sqlite3.connect(config.ConfigHandler.DATABASE_PATH) as conn:
             c = conn.cursor()
 
@@ -258,7 +232,7 @@ class Toot(BaseModel):
 
 def get_toots_since(since: datetime.datetime, session_id: str):
     assert isinstance(since, datetime.datetime), type(since)
-    create_database()
+    migrations.create_database()
     download_timeline(since, session_id)
     return Toot.get_toots_since(since)
 
@@ -271,7 +245,6 @@ def download_timeline(since: datetime.datetime, session_id: str):
     buffer: list[Toot] = []
     last_id = ""
     curr_url = f"{config.ConfigHandler.MASTO_BASE}/api/v1/timelines/home?limit=40"
-    import json as JSON
     while not earliest_date or earliest_date > last_date:
         response = requests.get(curr_url, headers=config.headers())
         response.raise_for_status()
@@ -327,32 +300,6 @@ def _create_embeddings(toots: list[Toot], session_id: str):
     return toots
 
 
-@functools.lru_cache()
-def _create_session_table():
-    create_database()
-    with sqlite3.connect(config.ConfigHandler.DATABASE_PATH) as conn:
-        c = conn.cursor()
-
-        # Create the toots table if it doesn't exist
-        c.execute('''
-            CREATE TABLE IF NOT EXISTS sessions (
-                id TEXT PRIMARY KEY,
-                algorithm_spec TEXT,
-                algorithm BLOB,
-                ui_settings TEXT
-            )
-        ''')
-
-        try:
-            c.execute('''
-                ALTER TABLE sessions ADD COLUMN settings TEXT
-            ''')
-        except sqlite3.OperationalError:
-            pass
-
-        conn.commit()
-
-
 class Settings(BaseModel):
     embedding_model: str | None = None
     summarize_model: str | None = None
@@ -364,6 +311,7 @@ class Session(BaseModel):
     algorithm: bytes | None = None
     ui_settings: str | None = None
     settings: Settings
+    name: str
 
     def set_ui_settings(self, ui_settings: dict[str, str]):
         self.ui_settings = json.dumps(ui_settings)
@@ -372,7 +320,7 @@ class Session(BaseModel):
     def get_ui_settings(self) -> dict[str, str]:
         return json.loads(self.ui_settings or "{}")
 
-    def get_algorithm_type(self) -> Type["base.BaseAlgorithm"] | None:
+    def get_algorithm_type(self) -> Type["algorithm.BaseAlgorithm"] | None:
         try:
             spec = json.loads(self.algorithm_spec) if self.algorithm_spec else {}
             if "module" in spec and "class_name" in spec:
@@ -383,27 +331,15 @@ class Session(BaseModel):
             traceback.print_exc()
             return None
 
-    def set_algorithm_by_name(self, name: str) -> Type["base.BaseAlgorithm"] | None:
-        from fossil_mastodon.algorithm import base
-        algo = next((algo for algo in base.get_algorithms() if algo.get_name() == name), None)
-        self.algorithm_spec = json.dumps({
-            "module": algo.__module__,
-            "class_name": algo.__name__,
-            "kwargs": {},
-        })
-        self.algorithm = None
-        self.save()
-        return algo
-
     @classmethod
     def get_by_id(cls, id: str) -> Optional["Session"]:
-        create_database()
-        _create_session_table()
+        migrations.create_database()
+        migrations.create_session_table()
         with sqlite3.connect(config.ConfigHandler.DATABASE_PATH) as conn:
             c = conn.cursor()
 
             c.execute('''
-                SELECT id, algorithm_spec, algorithm, ui_settings, settings FROM sessions WHERE id = ?
+                SELECT id, algorithm_spec, algorithm, ui_settings, settings, name FROM sessions WHERE id = ?
             ''', (id,))
 
             row = c.fetchone()
@@ -414,34 +350,50 @@ class Session(BaseModel):
                     algorithm=row[2],
                     ui_settings=row[3],
                     settings=Settings(**json.loads(row[4] or "{}")),
+                    name=row[5],
                 )
                 return session
             return None
 
     @classmethod
-    def create(cls) -> "Session":
-        import uuid
-        return cls(id=str(uuid.uuid4()).replace("-", ""), settings=Settings())
+    def get_or_create(cls, name: str = "Main") -> "Session":
+        migrations.create_database()
+        migrations.create_session_table()
+        with sqlite3.connect(config.ConfigHandler.DATABASE_PATH) as conn:
+            c = conn.cursor()
+            c.execute(""" SELECT id FROM sessions WHERE name IS NOT NULL ORDER BY name DESC LIMIT 1 """)
+            row = c.fetchone()
+            if row:
+                # this is dumb. the ai did it. it's also brilliant. slightly innefficient, but whatever. clean.
+                obj = cls.get_by_id(row[0])
+                assert obj is not None
+                return obj
+            else:
+                rand_str = "".join(random.choices(string.ascii_lowercase) for _ in range(32))
+                obj = cls(id=rand_str, settings=Settings(), name=name)
+                obj.save(init_conn=conn)
+                return obj
 
     def save(self, init_conn: sqlite3.Connection | None = None) -> bool:
-        _create_session_table()
         try:
             if init_conn is None:
                 conn = sqlite3.connect(config.ConfigHandler.DATABASE_PATH)
             else:
                 conn = init_conn
-            create_database()
+            migrations.create_database()
+            migrations.create_session_table()
             c = conn.cursor()
 
             c.execute('''
-                INSERT INTO sessions (id, algorithm_spec, algorithm, ui_settings, settings)
-                VALUES (?, ?, ?, ?, ?)
+                INSERT INTO sessions (id, algorithm_spec, algorithm, ui_settings, settings, name)
+                VALUES (?, ?, ?, ?, ?, ?)
                 ON CONFLICT(id) DO UPDATE 
                     SET algorithm_spec = excluded.algorithm_spec
                       , algorithm = excluded.algorithm
                       , ui_settings = excluded.ui_settings
                       , settings = excluded.settings
-            ''', (self.id, self.algorithm_spec, self.algorithm, self.ui_settings, self.settings.model_dump_json()))
+                      , name = excluded.name
+            ''', (self.id, self.algorithm_spec, self.algorithm, self.ui_settings, self.settings.model_dump_json(), self.name))
 
             if init_conn is None:
                 conn.commit()
