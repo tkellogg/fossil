@@ -96,7 +96,7 @@ class Toot(BaseModel):
     def save(self, init_conn: sqlite3.Connection | None = None) -> bool:
         try:
             if init_conn is None:
-                conn = sqlite3.connect(config.ConfigHandler.DATABASE_PATH)
+                conn = config.ConfigHandler.open_db()
             else:
                 conn = init_conn
             migrations.create_database()
@@ -135,7 +135,7 @@ class Toot(BaseModel):
     @classmethod
     def get_toots_since(cls, since: datetime.datetime) -> list["Toot"]:
         migrations.create_database()
-        with sqlite3.connect(config.ConfigHandler.DATABASE_PATH) as conn:
+        with config.ConfigHandler.open_db() as conn:
             c = conn.cursor()
 
             c.execute('''
@@ -164,7 +164,7 @@ class Toot(BaseModel):
     @classmethod
     def get_by_id(cls, id: int) -> Optional["Toot"]:
         migrations.create_database()
-        with sqlite3.connect(config.ConfigHandler.DATABASE_PATH) as conn:
+        with config.ConfigHandler.open_db() as conn:
             c = conn.cursor()
 
             c.execute('''
@@ -191,7 +191,7 @@ class Toot(BaseModel):
     @staticmethod
     def get_latest_date() -> datetime.datetime | None:
         migrations.create_database()
-        with sqlite3.connect(config.ConfigHandler.DATABASE_PATH) as conn:
+        with config.ConfigHandler.open_db() as conn:
             c = conn.cursor()
 
             c.execute('''
@@ -278,7 +278,7 @@ def download_timeline(since: datetime.datetime, session_id: str):
 
         # Example: Call the _create_embeddings function
         _create_embeddings(page_toots, session_id)
-        with sqlite3.connect(config.ConfigHandler.DATABASE_PATH) as conn:
+        with config.ConfigHandler.open_db() as conn:
             for toot in page_toots:
                 toot.save(init_conn=conn)
 
@@ -335,7 +335,7 @@ class Session(BaseModel):
     def get_by_id(cls, id: str) -> Optional["Session"]:
         migrations.create_database()
         migrations.create_session_table()
-        with sqlite3.connect(config.ConfigHandler.DATABASE_PATH) as conn:
+        with config.ConfigHandler.open_db() as conn:
             c = conn.cursor()
 
             c.execute('''
@@ -359,7 +359,7 @@ class Session(BaseModel):
     def get_or_create(cls, name: str = "Main") -> "Session":
         migrations.create_database()
         migrations.create_session_table()
-        with sqlite3.connect(config.ConfigHandler.DATABASE_PATH) as conn:
+        with config.ConfigHandler.open_db() as conn:
             c = conn.cursor()
             c.execute(""" SELECT id FROM sessions WHERE name IS NOT NULL ORDER BY name DESC LIMIT 1 """)
             row = c.fetchone()
@@ -377,7 +377,7 @@ class Session(BaseModel):
     def save(self, init_conn: sqlite3.Connection | None = None) -> bool:
         try:
             if init_conn is None:
-                conn = sqlite3.connect(config.ConfigHandler.DATABASE_PATH)
+                conn = config.ConfigHandler.open_db()
             else:
                 conn = init_conn
             migrations.create_database()

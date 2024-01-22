@@ -17,10 +17,7 @@ from fossil_mastodon import config
 
 @functools.cache
 def create_database():
-    if os.path.exists(config.ConfigHandler.DATABASE_PATH):
-        return
-
-    with sqlite3.connect(config.ConfigHandler.DATABASE_PATH) as conn:
+    with config.ConfigHandler.open_db() as conn:
         c = conn.cursor()
 
         # Create the toots table if it doesn't exist
@@ -43,7 +40,7 @@ def create_database():
 @functools.lru_cache()
 def create_session_table():
     create_database()
-    with sqlite3.connect(config.ConfigHandler.DATABASE_PATH) as conn:
+    with config.ConfigHandler.open_db() as conn:
         c = conn.cursor()
 
         # Create the toots table if it doesn't exist

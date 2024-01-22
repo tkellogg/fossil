@@ -35,7 +35,7 @@ class ClusterRenderer(algorithm.Renderable, pydantic.BaseModel):
 
 @functools.lru_cache
 def _create_table():
-    with sqlite3.connect(config.ConfigHandler.DATABASE_PATH) as conn:
+    with config.ConfigHandler.open_db() as conn:
         c = conn.cursor()
 
         # Create the toots table if it doesn't exist
@@ -68,7 +68,7 @@ class TootModel(pydantic.BaseModel):
     @classmethod
     def for_toots(cls, toots: list[core.Toot], model_version: str) -> list["TootModel"]:
         _create_table()
-        with sqlite3.connect(config.ConfigHandler.DATABASE_PATH) as conn:
+        with config.ConfigHandler.open_db() as conn:
             c = conn.cursor()
             c.execute('''
                 SELECT id, toot_id, model_version, cluster_id
@@ -92,7 +92,7 @@ class TootModel(pydantic.BaseModel):
         if isinstance(self.cluster_id, np.number):
             raise ValueError("cluster_id must be an int, not a numpy type")
 
-        with sqlite3.connect(config.ConfigHandler.DATABASE_PATH) as conn:
+        with config.ConfigHandler.open_db() as conn:
             c = conn.cursor()
             if self.id is None:
                 c.execute('''

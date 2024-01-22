@@ -38,7 +38,7 @@ class TrainContext(pydantic.BaseModel):
         return core.Toot.get_toots_since(self.end_time - self.timedelta)
 
     def sqlite_connection(self) -> sqlite3.Connection:
-        return sqlite3.connect(config.ConfigHandler.DATABASE_PATH)
+        return config.ConfigHandler.open_db()
 
 
 class BaseAlgorithm(abc.ABC):

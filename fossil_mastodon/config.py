@@ -51,7 +51,7 @@ class _ConfigHandler():
     def _get_from_session(self, session_id: str| None, item: str) -> str:
         if not session_id:
             return ""
-        with sqlite3.connect(self.DATABASE_PATH) as conn:
+        with self.open_db() as conn:
             c = conn.cursor()
             c.execute('SELECT settings FROM sessions WHERE id = ?', [session_id])
             row = c.fetchone()
@@ -59,6 +59,9 @@ class _ConfigHandler():
                 return json.loads(row[0]).get(item, "")
             except (json.decoder.JSONDecodeError, IndexError, TypeError):
                 return ""
+
+    def open_db(self) -> sqlite3.Connection:
+        return sqlite3.connect(self.DATABASE_PATH)
     
     def EMBEDDING_MODEL(self, session_id: str|None = None) -> Model:
         c_val = self._get_from_session(session_id, "embedding_model")
