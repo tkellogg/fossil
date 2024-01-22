@@ -90,8 +90,10 @@ async def toots_download(request: Request):
     session: core.Session = request.state.session
     algorithm_spec: dict = json.loads(session.algorithm_spec) if session.algorithm_spec else {}
 
-    # download
-    core.download_timeline(datetime.datetime.utcnow() - datetime.timedelta(days=1), session.id)
+    # first page load calls this with display-only=true to load what was loaded last time
+    if request.query_params.get("display-only", "") != "true":
+        # download
+        core.download_timeline(datetime.datetime.utcnow() - datetime.timedelta(days=1), session.id)
 
     # render
     body_params: dict[str, str] = dict((await request.form()))

@@ -102,8 +102,13 @@ Toot display
     border-radius: 0.5rem;
 }
 
+.toot .content a {
+    /* long links cause horizontal scroll */
+    word-wrap: break-word;
+}
+
 #toots {
-    margin: 40px 0.5rem;
+    margin: 2.5rem 0.5rem;
 }
 
 /********

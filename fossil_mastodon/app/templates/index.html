@@ -74,7 +74,7 @@
     </form>
   </section>
     
-  <article id="toots">
-    No Toots Yet.
+  <article id="toots" hx-post="/toots/download?display-only=true" hx-swap="innerHTML" hx-target="#toots" hx-include="#model-params" hx-trigger="load">
+    <img src="/static/work-in-progress.gif" style="width: 5rem; height: 5rem" /> 
   </article>
 {% endblock %}
