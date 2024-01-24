@@ -7,6 +7,7 @@ and inflexible. This gives us a lot more control.
 import datetime
 import importlib
 import json
+import logging
 from typing import Annotated, Type
 
 import llm
@@ -16,7 +17,10 @@ from fastapi import FastAPI, Form, HTTPException, Request, responses, staticfile
 from fossil_mastodon import algorithm, config, core, migrations, plugins, ui
 
 
-app = FastAPI()
+logger = logging.getLogger(__name__)
+
+
+app = FastAPI(lifespan=plugins.lifespan)
 
 
 app.mount("/static", staticfiles.StaticFiles(directory=config.ASSETS.assets_path), name="static")

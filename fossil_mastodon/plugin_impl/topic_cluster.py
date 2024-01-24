@@ -1,6 +1,5 @@
 import functools
 import random
-import sqlite3
 import string
 import llm
 import numpy as np
@@ -10,8 +9,7 @@ from fastapi import Response, responses
 from sklearn.cluster import KMeans
 from tqdm import trange
 
-from fossil_mastodon import config, core, plugins, ui
-from fossil_mastodon import algorithm
+from fossil_mastodon import algorithm, config, core, migrations, plugins, ui
 
 
 plugin = plugins.Plugin(
@@ -33,7 +31,7 @@ class ClusterRenderer(algorithm.Renderable, pydantic.BaseModel):
         **response_args)
 
 
-@functools.lru_cache
+@migrations.migration
 def _create_table():
     with config.ConfigHandler.open_db() as conn:
         c = conn.cursor()

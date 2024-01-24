@@ -7,15 +7,31 @@ Typically you should have a @lru_cache on each function to prevent unnecessary i
 but also know that it'll get re-invoked every time the server restarts.
 """
 import functools
-import os
 import random
 import sqlite3
 import string
 
 from fossil_mastodon import config
 
+class migration:
+    """
+    Decorator that tracks all migration functions.
+    """
+    all: list["migration"] = []
+    __counter = 0
 
-@functools.cache
+    def __init__(self, func: callable):
+        self.func = func
+        self.cached = functools.lru_cache()(func)
+        migration.__counter += 1
+        self.id = migration.__counter
+        migration.all.append(self)
+
+    def __call__(self, *args, **kwargs):
+        return self.cached(*args, **kwargs)
+
+
+@migration
 def create_database():
     with config.ConfigHandler.open_db() as conn:
         c = conn.cursor()
@@ -37,7 +53,7 @@ def create_database():
         conn.commit()
 
 
-@functools.lru_cache()
+@migration
 def create_session_table():
     create_database()
     with config.ConfigHandler.open_db() as conn:

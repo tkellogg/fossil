@@ -1,7 +1,10 @@
 import abc
+import contextlib
 import functools
 import inspect
+import logging
 import re
+import sys
 import traceback
 from typing import Callable, Type
 
@@ -10,6 +13,9 @@ import pkg_resources
 import pydantic
 
 from fossil_mastodon import algorithm, ui, core
+
+
+logger = logging.getLogger(__name__)
 
 
 def title_case_to_spaced(string):
@@ -82,6 +88,7 @@ class Plugin(pydantic.BaseModel):
     enabled_by_default: bool = True
     _toot_display_buttons: list[TootDisplayPlugin] = pydantic.PrivateAttr(default_factory=list)
     _algorithms: list[Type[algorithm.BaseAlgorithm]] = pydantic.PrivateAttr(default_factory=list)
+    _lifecycle_hooks: list[callable] = pydantic.PrivateAttr(default_factory=list)
 
     @pydantic.validator("display_name", always=True)
     def _set_display_name(cls, v, values):
@@ -124,6 +131,14 @@ class Plugin(pydantic.BaseModel):
         algo.plugin = self
         return algo
 
+    def lifecycle_hook(self, fn: callable) -> callable:
+        """
+        Decorator for adding a lifecycle hook. Lifecycle hooks are called when the server starts
+        up, and can be used to perform initialization tasks.
+        """
+        self._lifecycle_hooks.append(fn)
+        return fn
+
 
 def init_plugins(app: FastAPI):
     global _app
@@ -165,6 +180,38 @@ def get_algorithms() -> list[Type[algorithm.BaseAlgorithm]]:
         for p in get_plugins()
         for algo in p._algorithms
     ]
+
+
+def get_lifecycle_hooks() -> list[callable]:
+    return [
+        contextlib.contextmanager(hook)
+        for p in get_plugins()
+        for hook in p._lifecycle_hooks
+    ]
+
+@contextlib.asynccontextmanager
+async def lifespan(app: FastAPI):
+    hooks = get_lifecycle_hooks()
+
+    objects = []
+    for hook in hooks:
+        try:
+            obj = hook(app)
+            obj.__enter__()
+            objects.append(obj)
+        except:
+            logger.exception(f"Error running lifecycle hook {hook}")
+
+    yield
+
+    exc_info = sys.exc_info()
+    exc = exc_info[1] if exc_info else None
+    exc_type = exc_info[0] if exc_info else None
+    for obj in objects:
+        try:
+            obj.__exit__(exc_type, exc)
+        except:
+            logger.exception(f"Error running lifecycle hook {hook}")
 
 
 class BadPluginFunction(Exception):
