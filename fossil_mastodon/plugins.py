@@ -3,16 +3,20 @@ import contextlib
 import functools
 import inspect
 import logging
+import pathlib
 import re
 import sys
 import traceback
-from typing import Callable, Type
+from typing import Callable, Type, TYPE_CHECKING
 
 from fastapi import FastAPI, Request, responses, templating
 import pkg_resources
 import pydantic
 
-from fossil_mastodon import algorithm, ui, core
+from fossil_mastodon import algorithm, config, ui, core
+
+if TYPE_CHECKING:
+    from fossil_mastodon import server
 
 
 logger = logging.getLogger(__name__)
@@ -89,6 +93,8 @@ class Plugin(pydantic.BaseModel):
     _toot_display_buttons: list[TootDisplayPlugin] = pydantic.PrivateAttr(default_factory=list)
     _algorithms: list[Type[algorithm.BaseAlgorithm]] = pydantic.PrivateAttr(default_factory=list)
     _lifecycle_hooks: list[callable] = pydantic.PrivateAttr(default_factory=list)
+    _menu_items: list[str] = pydantic.PrivateAttr(default_factory=list)
+    _head_html: list[str] = pydantic.PrivateAttr(default_factory=list)
 
     @pydantic.validator("display_name", always=True)
     def _set_display_name(cls, v, values):
@@ -98,6 +104,11 @@ class Plugin(pydantic.BaseModel):
     def api_operation(self) -> FastAPI:
         assert _app is not None
         return _app
+
+    @property
+    def TemplateResponse(self) -> Type["server.templates.TemplateResponse"]:
+        from fossil_mastodon import server
+        return server.templates.TemplateResponse
 
     def toot_display_button(self, impl: TootDisplayFn) -> TootDisplayFn:
         """
@@ -139,6 +150,32 @@ class Plugin(pydantic.BaseModel):
         self._lifecycle_hooks.append(fn)
         return fn
 
+    def add_templates_dir(self, path: pathlib.Path):
+        """
+        Add a directory of templates to the plugin. These will be accessible from FastAPI response
+        objects. For example, if you add a directory of templates at `<path>/templates`, then you
+        can return a template from a FastAPI route like this:
+
+            @plugin.api_operation.get("/my_route")
+            def my_route():
+                return plugin.TemplateResponse("my_template.html", {"request": request})
+        """
+        config.ASSETS.add_dir(path, "templates")
+
+    def add_static_dir(self, path: pathlib.Path):
+        """
+        Add a directory of static files to the plugin. These will be downloadable by the browser at
+        the path `GET /static/example.css`, assuming the example.css exists at `<path>/example.css`
+        as a local path.
+        """
+        config.ASSETS.add_dir(path, "static")
+
+    def add_menu_item(self, raw_html: str):
+        self._menu_items.append(raw_html)
+
+    def add_head_html(self, raw_html: str):
+        self._head_html.append(raw_html)
+
 
 def init_plugins(app: FastAPI):
     global _app
@@ -179,6 +216,22 @@ def get_algorithms() -> list[Type[algorithm.BaseAlgorithm]]:
         algo
         for p in get_plugins()
         for algo in p._algorithms
+    ]
+
+
+def get_menu_items() -> list[str]:
+    return [
+        algo
+        for p in get_plugins()
+        for algo in p._menu_items
+    ]
+
+
+def get_head_html() -> list[str]:
+    return [
+        algo
+        for p in get_plugins()
+        for algo in p._head_html
     ]
 
 

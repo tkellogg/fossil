@@ -8,13 +8,22 @@
     <script src="https://unpkg.com/htmx.org@1.9.10" integrity="sha384-D1Kt99CQMDuVetoL1lrYwg5t+9QdHe7NLX/SoJYkXDFfX37iInKRy5xLSi8nO7UC" crossorigin="anonymous"></script>
     <script src="https://unpkg.com/htmx.org/dist/ext/json-enc.js"></script>
     <script src="/static/page.js"></script>
+    {% for item in head_html() %}
+        {% autoescape false %}
+        {{ item }}
+        {% endautoescape %}
+    {% endfor %}
 </head>
 <body>
     <h1><button onclick="htmx.toggleClass(htmx.find('#hamburger'), 'open')">🍔</button> Fossil</h1>
     <div id="hamburger" class="hamburger">
         <a href="/">Home</a>
         <a href="/settings">Settings</a>
-        <a href="/about">About</a>
+        {% for menu_item in extra_menu_items() %}
+            {% autoescape false %}
+            {{ menu_item }}
+            {% endautoescape %}
+        {% endfor %}
     </div>
     <div>
         {% block content %}

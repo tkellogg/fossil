@@ -139,6 +139,9 @@ class StaticFiles(pydantic.BaseModel):
 
         return obj
 
+    def add_dir(self, path: pathlib.Path, mount_path: str):
+        shutil.copytree(path, self.base_path / mount_path, dirs_exist_ok=True)
+
     def cleanup(self):
         self.rmtree(self.assets_path.parent)
 
