@@ -150,3 +150,6 @@ class StaticFiles(pydantic.BaseModel):
 
 
 ASSETS = StaticFiles.from_env()
+
+def get_db_path(conn: sqlite3.Connection) -> str:
+    return conn.execute("PRAGMA database_list").fetchone()[2]

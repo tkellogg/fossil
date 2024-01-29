@@ -336,6 +336,7 @@ class Session(BaseModel):
         migrations.create_database()
         migrations.create_session_table()
         with config.ConfigHandler.open_db() as conn:
+            print(f"Getting session; path={config.get_db_path(conn)}")
             c = conn.cursor()
 
             c.execute('''
