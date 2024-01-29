@@ -8,6 +8,8 @@ import datetime
 import importlib
 import json
 import logging
+import random
+import string
 from typing import Annotated, Type
 
 import llm
@@ -139,6 +141,7 @@ async def toots_train(
     # train
     session: core.Session = request.state.session
     algo = session.get_algorithm_type() or plugins.get_algorithms()[0]
+    algo.model_version = "".join(random.choices(string.ascii_letters + string.digits, k=12))
     model = algo.train(context, algo_kwargs)
     session.algorithm = model.serialize()
     session.algorithm_spec = json.dumps({
