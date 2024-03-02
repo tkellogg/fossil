@@ -260,9 +260,10 @@ async def lifespan(app: FastAPI):
     exc_info = sys.exc_info()
     exc = exc_info[1] if exc_info else None
     exc_type = exc_info[0] if exc_info else None
+    tb = exc_info[2] if exc_info else None
     for obj in objects:
         try:
-            obj.__exit__(exc_type, exc)
+            obj.__exit__(exc_type, exc, tb)
         except:
             logger.exception(f"Error running lifecycle hook {hook}")
 

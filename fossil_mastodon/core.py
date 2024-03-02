@@ -282,6 +282,8 @@ def download_timeline(since: datetime.datetime, session_id: str):
             for toot in page_toots:
                 toot.save(init_conn=conn)
 
+def _prepare_text(text: str) -> str:
+    return html2text.html2text(text)[:1000]
 
 def _create_embeddings(toots: list[Toot], session_id: str):
     # Convert the list of toots to a single string
@@ -289,7 +291,7 @@ def _create_embeddings(toots: list[Toot], session_id: str):
 
     # Call the llm embedding API to create embeddings
     emb_model = llm.get_embedding_model(config.ConfigHandler.EMBEDDING_MODEL(session_id).name)
-    embeddings = list(emb_model.embed_batch([html2text.html2text(t.content) for t in toots]))
+    embeddings = list(emb_model.embed_batch([_prepare_text(t.content) for t in toots]))
 
     # Extract the embeddings from the API response
     print(f"got {len(embeddings)} embeddings")
