@@ -1,0 +1,20 @@
+{% extends "base/page.html" %}
+
+{% block content %}
+    <div class="row nav-tabs">
+        <a href="/" class="back-button"></a>
+        <div class="nav-tab {% if request.url.path == '/settings' %}active{% endif %}"><a href="/settings">Settings</a></div>
+        {% for menu_item in extra_menu_items() %}
+            <div class="nav-tab {% if request.url.path == menu_item.url %}active{% endif %}">
+                {% autoescape false %}
+                {{ menu_item.html }}
+                {% endautoescape %}
+            </div>
+        {% endfor %}
+    </div>
+
+    {% block core_content %}
+    <!-- Specialized content goes here -->
+    {% endblock %}
+{% endblock %}
+

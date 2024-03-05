@@ -1,9 +1,7 @@
-{% extends "base/page.html" %}
+{% extends "base/admin.html" %}
 
-{% block content %}
+{% block core_content %}
 <section>
-    <h2><a href="/" class="back-button">⬅</a>Settings</h2>
-
     <form id="settings-form" hx-ext="json-enc" hx-swap="innerHTML">
         <label for="embedding_model">Embedding model</label>
         <div class="row">

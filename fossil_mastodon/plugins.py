@@ -66,6 +66,10 @@ class RenderContext(pydantic.BaseModel):
 
 _app: FastAPI | None = None
 
+class _MenuItem(pydantic.BaseModel):
+    html: str
+    url: str
+
 
 class Plugin(pydantic.BaseModel):
     """
@@ -93,7 +97,7 @@ class Plugin(pydantic.BaseModel):
     _toot_display_buttons: list[TootDisplayPlugin] = pydantic.PrivateAttr(default_factory=list)
     _algorithms: list[Type[algorithm.BaseAlgorithm]] = pydantic.PrivateAttr(default_factory=list)
     _lifecycle_hooks: list[callable] = pydantic.PrivateAttr(default_factory=list)
-    _menu_items: list[str] = pydantic.PrivateAttr(default_factory=list)
+    _menu_items: list[_MenuItem] = pydantic.PrivateAttr(default_factory=list)
     _head_html: list[str] = pydantic.PrivateAttr(default_factory=list)
 
     @pydantic.validator("display_name", always=True)
@@ -170,8 +174,8 @@ class Plugin(pydantic.BaseModel):
         """
         config.ASSETS.add_dir(path, "static")
 
-    def add_menu_item(self, raw_html: str):
-        self._menu_items.append(raw_html)
+    def add_menu_item(self, raw_html: str, url="#"):
+        self._menu_items.append(_MenuItem(html=raw_html, url=url))
 
     def add_head_html(self, raw_html: str):
         self._head_html.append(raw_html)
