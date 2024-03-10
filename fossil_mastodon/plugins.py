@@ -98,6 +98,7 @@ class Plugin(pydantic.BaseModel):
     _algorithms: list[Type[algorithm.BaseAlgorithm]] = pydantic.PrivateAttr(default_factory=list)
     _lifecycle_hooks: list[callable] = pydantic.PrivateAttr(default_factory=list)
     _menu_items: list[_MenuItem] = pydantic.PrivateAttr(default_factory=list)
+    _extra_nav: list[str] = pydantic.PrivateAttr(default_factory=list)
     _head_html: list[str] = pydantic.PrivateAttr(default_factory=list)
 
     @pydantic.validator("display_name", always=True)
@@ -177,6 +178,9 @@ class Plugin(pydantic.BaseModel):
     def add_menu_item(self, raw_html: str, url="#"):
         self._menu_items.append(_MenuItem(html=raw_html, url=url))
 
+    def add_extra_nav(self, raw_html: str):
+        self._extra_nav.append(raw_html)
+
     def add_head_html(self, raw_html: str):
         self._head_html.append(raw_html)
 
@@ -228,6 +232,14 @@ def get_menu_items() -> list[str]:
         algo
         for p in get_plugins()
         for algo in p._menu_items
+    ]
+
+
+def get_extra_nav() -> list[str]:
+    return [
+        algo
+        for p in get_plugins()
+        for algo in p._extra_nav
     ]
 
 

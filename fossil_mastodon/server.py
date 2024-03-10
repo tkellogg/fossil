@@ -248,6 +248,7 @@ async def toots_favorite(id: int):
     
 templates.env.globals["extra_menu_items"] = plugins.get_menu_items
 templates.env.globals["head_html"] = plugins.get_head_html
+templates.env.globals["extra_nav"] = plugins.get_extra_nav
 
 # this should always be the last line of this file
 plugins.init_plugins(app)

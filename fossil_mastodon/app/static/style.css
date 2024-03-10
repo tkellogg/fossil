@@ -58,6 +58,18 @@ input[type="text"],input[type="password"] {
     color: #ffffff;
 }
 
+h1.nav {
+    display: flex;
+    align-items: center;
+    justify-content: space-between; /* This will keep the items spaced apart */
+    width: 100%;
+}
+
+.nav img {
+    height: 3rem;
+    width: 7rem;
+}
+
 /********
 Navigation tabs
 *********/
@@ -303,6 +315,16 @@ Spinner
 Hamburger
 *********/
 
+.hamburger-launch {
+    background-color: transparent;
+}
+.hamburger-launch:hover {
+    background-color: #444444;
+}
+.hamburger-launch svg {
+    fill: #ffffff;
+}
+
 .hamburger {
     display: none;
     cursor: pointer;
@@ -310,6 +332,11 @@ Hamburger
 .hamburger.open {
     display: flex;
     flex-direction: column;
+    justify-content: flex-start;
+    align-items: flex-end;
+    right: 0;
+    top: 5rem;
+    min-width: 8rem;
     position: absolute;
     z-index: 10;
     background-color: #333333;
