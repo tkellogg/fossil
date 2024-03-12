@@ -15,6 +15,7 @@ import llm
 import numpy as np
 from pydantic import BaseModel
 import requests
+import tiktoken
 
 from fossil_mastodon import config, migrations
 
@@ -290,8 +291,25 @@ def _create_embeddings(toots: list[Toot], session_id: str):
     toots = [t for t in toots if t.content]
 
     # Call the llm embedding API to create embeddings
+    # bugfix: The overall batch size seems to exceed the model's limit, so we need to split the batch into smaller chunks
     emb_model = llm.get_embedding_model(config.ConfigHandler.EMBEDDING_MODEL(session_id).name)
-    embeddings = list(emb_model.embed_batch([_prepare_text(t.content) for t in toots]))
+    total_size = 0
+    batch = []
+    embeddings = []
+    measure = tiktoken.encoding_for_model("gpt-3.5-turbo")
+    for toot in toots:
+        text = _prepare_text(toot.content)
+        new_tokens = len(measure.encode(text))
+        if total_size + new_tokens > 8000:
+            embeddings.extend(emb_model.embed_batch(batch))
+            batch.clear()
+            total_size = 0
+        else:
+            batch.append(text)
+            total_size += new_tokens
+    if len(batch) > 0:
+        embeddings.extend(emb_model.embed_batch(batch))
+        batch.clear()
 
     # Extract the embeddings from the API response
     print(f"got {len(embeddings)} embeddings")
